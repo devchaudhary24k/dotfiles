@@ -1,0 +1,465 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+DOTFILES_BIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+DOTFILES_ROOT_DIR="$(cd -- "$DOTFILES_BIN_DIR/.." && pwd -P)"
+DOTFILES_STOW_DIR="$DOTFILES_ROOT_DIR/home"
+DOTFILES_HOST_DIR="$DOTFILES_ROOT_DIR/hosts"
+DOTFILES_PACKAGE_DIR="$DOTFILES_ROOT_DIR/packages"
+DOTFILES_TARGET_DIR="${HOME:?HOME is not set}"
+DOTFILES_HOST_NAME="$(hostnamectl --static 2>/dev/null || hostname)"
+
+say() {
+    printf '%s\n' "$*"
+}
+
+warn() {
+    printf 'warning: %s\n' "$*" >&2
+}
+
+die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+need_command() {
+    command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+usage() {
+    cat <<'EOF'
+Usage: dots COMMAND [ARGUMENTS]
+
+Commands:
+  snapshot            Regenerate package and enabled-user-service manifests
+  add PACKAGE FILE    Adopt one reviewed regular file into a Stow package
+  link [PACKAGE...]   Restow all or selected home packages
+  unlink [PACKAGE...] Unstow all or selected home packages
+  dry-run [PACKAGE...]
+                      Preview links for all or selected home packages
+  scan                Report unmanaged files near tracked configurations
+  status              Show Git status and a diff summary
+  doctor              Check dependencies, managed links, and secret risks
+  help                 Show this help
+EOF
+}
+
+list_packages() {
+    local package_root=$1
+
+    [[ -d "$package_root" ]] || return 0
+    find "$package_root" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' \
+        | LC_ALL=C sort
+}
+
+validate_packages() {
+    local package
+
+    for package in "$@"; do
+        [[ "$package" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+            || die "invalid package name: $package"
+        [[ -d "$DOTFILES_STOW_DIR/$package" ]] \
+            || die "unknown home package: $package"
+    done
+}
+
+run_stow() {
+    local operation=$1
+    shift
+    local -a packages=("$@")
+    local -a stow_operation=()
+
+    need_command stow
+
+    if ((${#packages[@]} == 0)); then
+        mapfile -t packages < <(list_packages "$DOTFILES_STOW_DIR")
+    else
+        validate_packages "${packages[@]}"
+    fi
+
+    ((${#packages[@]} > 0)) || die "no home packages found"
+
+    case "$operation" in
+        link) stow_operation=(--restow) ;;
+        unlink) stow_operation=(--delete) ;;
+        dry-run) stow_operation=(--simulate --verbose=2 --restow) ;;
+        *) die "internal error: unknown Stow operation: $operation" ;;
+    esac
+
+    stow \
+        --dir="$DOTFILES_STOW_DIR" \
+        --target="$DOTFILES_TARGET_DIR" \
+        --no-folding \
+        "${stow_operation[@]}" \
+        "${packages[@]}"
+
+    if (($# == 0)) && [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
+        stow \
+            --dir="$DOTFILES_HOST_DIR" \
+            --target="$DOTFILES_TARGET_DIR" \
+            --no-folding \
+            "${stow_operation[@]}" \
+            "$DOTFILES_HOST_NAME"
+    fi
+}
+
+write_sorted_manifest() {
+    local destination=$1
+    shift
+    local temporary
+
+    mkdir -p -- "$(dirname -- "$destination")"
+    temporary="$(mktemp "${destination}.tmp.XXXXXX")"
+
+    if ! "$@" | LC_ALL=C sort -u >"$temporary"; then
+        rm -f -- "$temporary"
+        die "failed to generate $destination"
+    fi
+
+    chmod 0644 "$temporary"
+    mv -f -- "$temporary" "$destination"
+}
+
+native_packages() {
+    pacman -Qqen
+}
+
+foreign_packages() {
+    pacman -Qqem
+}
+
+flatpak_packages() {
+    flatpak list --app --columns=application
+}
+
+enabled_user_services() {
+    systemctl --user list-unit-files --state=enabled --no-legend \
+        | awk '{print $1}'
+}
+
+snapshot() {
+    need_command pacman
+
+    write_sorted_manifest "$DOTFILES_PACKAGE_DIR/pacman.txt" native_packages
+    write_sorted_manifest "$DOTFILES_PACKAGE_DIR/aur.txt" foreign_packages
+
+    if command -v flatpak >/dev/null 2>&1; then
+        write_sorted_manifest "$DOTFILES_PACKAGE_DIR/flatpak.txt" flatpak_packages
+    fi
+
+    if command -v systemctl >/dev/null 2>&1; then
+        write_sorted_manifest \
+            "$DOTFILES_PACKAGE_DIR/enabled-user-services.txt" \
+            enabled_user_services
+    fi
+
+    say "Package and service manifests updated."
+    git -C "$DOTFILES_ROOT_DIR" status --short -- packages 2>/dev/null || true
+}
+
+path_is_sensitive() {
+    local relative_path=$1
+
+    case "/$relative_path" in
+        */.ssh/*|*/.gnupg/*|*/.password-store/*|*/.config/1Password/*|\
+        */.local/share/keyrings/*|*/.local/share/kwalletd/*|\
+        */.config/google-chrome/*|*/.config/chromium/*|\
+        */.config/BraveSoftware/*|*/.mozilla/*)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+content_looks_sensitive() {
+    local source_file=$1
+    local pattern
+
+    pattern='(api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|password|passwd|credential|private[_-]?key)[[:space:]]*[:=]'
+    LC_ALL=C grep -IqiE "$pattern" "$source_file"
+}
+
+add_file() {
+    (($# == 2)) || die "usage: dots add PACKAGE FILE"
+
+    local package=$1
+    local input_path=$2
+    local source_path relative_path destination_path
+    local backup_root backup_path timestamp
+
+    need_command realpath
+    need_command stow
+
+    [[ "$package" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+        || die "invalid package name: $package"
+    [[ ! -L "$input_path" ]] \
+        || die "refusing to adopt a symlink: $input_path"
+    [[ -f "$input_path" ]] \
+        || die "add currently accepts one existing regular file"
+
+    source_path="$(realpath -e -- "$input_path")"
+
+    case "$source_path" in
+        "$DOTFILES_TARGET_DIR"/*) ;;
+        *) die "file must be located below $DOTFILES_TARGET_DIR" ;;
+    esac
+
+    case "$source_path" in
+        "$DOTFILES_ROOT_DIR"/*) die "file is already inside the repository" ;;
+    esac
+
+    relative_path="${source_path#"$DOTFILES_TARGET_DIR"/}"
+
+    path_is_sensitive "$relative_path" \
+        && die "refusing known sensitive location: $source_path"
+    content_looks_sensitive "$source_path" \
+        && die "possible secret-shaped assignment found; review this file manually"
+
+    destination_path="$DOTFILES_STOW_DIR/$package/$relative_path"
+    [[ ! -e "$destination_path" && ! -L "$destination_path" ]] \
+        || die "destination already exists: $destination_path"
+
+    timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    backup_root="${XDG_STATE_HOME:-$DOTFILES_TARGET_DIR/.local/state}/dotfiles/backups/$timestamp"
+    backup_path="$backup_root/$relative_path"
+
+    mkdir -p -- "$(dirname -- "$destination_path")" "$(dirname -- "$backup_path")"
+    cp --preserve=mode,timestamps -- "$source_path" "$destination_path"
+    mv -- "$source_path" "$backup_path"
+
+    if ! stow \
+        --dir="$DOTFILES_STOW_DIR" \
+        --target="$DOTFILES_TARGET_DIR" \
+        --no-folding \
+        --simulate --restow "$package"; then
+        mv -- "$backup_path" "$source_path"
+        rm -f -- "$destination_path"
+        die "Stow dry-run failed; original restored"
+    fi
+
+    if ! stow \
+        --dir="$DOTFILES_STOW_DIR" \
+        --target="$DOTFILES_TARGET_DIR" \
+        --no-folding \
+        --restow "$package"; then
+        [[ -L "$source_path" ]] && unlink -- "$source_path"
+        mv -- "$backup_path" "$source_path"
+        die "Stow failed; original restored and repository copy retained"
+    fi
+
+    say "Adopted: $source_path"
+    say "Package: $package"
+    say "Recovery copy: $backup_path"
+    git -C "$DOTFILES_ROOT_DIR" status --short -- "$destination_path" 2>/dev/null || true
+}
+
+load_ignore_patterns() {
+    DOTFILES_IGNORE_PATTERNS=()
+    [[ -f "$DOTFILES_ROOT_DIR/.dots-ignore" ]] || return 0
+
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        DOTFILES_IGNORE_PATTERNS+=("$line")
+    done <"$DOTFILES_ROOT_DIR/.dots-ignore"
+}
+
+path_is_ignored() {
+    local relative_path=$1
+    local pattern
+
+    for pattern in "${DOTFILES_IGNORE_PATTERNS[@]:-}"; do
+        [[ "$relative_path" == $pattern ]] && return 0
+    done
+    return 1
+}
+
+record_scan_root() {
+    local relative_path=$1
+    local remainder application
+
+    case "$relative_path" in
+        .config/*/*)
+            remainder="${relative_path#.config/}"
+            application="${remainder%%/*}"
+            DOTFILES_SCAN_ROOTS[".config/$application"]=1
+            ;;
+        .local/share/*/*)
+            remainder="${relative_path#.local/share/}"
+            application="${remainder%%/*}"
+            DOTFILES_SCAN_ROOTS[".local/share/$application"]=1
+            ;;
+    esac
+}
+
+collect_managed_tree() {
+    local package_root=$1
+    local selected_package=${2:-}
+    local package_path source_path relative_path
+    local -a package_paths=()
+
+    [[ -d "$package_root" ]] || return 0
+
+    if [[ -n "$selected_package" ]]; then
+        [[ -d "$package_root/$selected_package" ]] || return 0
+        package_paths=("$package_root/$selected_package")
+    else
+        while IFS= read -r -d '' package_path; do
+            package_paths+=("$package_path")
+        done < <(find "$package_root" -mindepth 1 -maxdepth 1 -type d -print0)
+    fi
+
+    for package_path in "${package_paths[@]}"; do
+        while IFS= read -r -d '' source_path; do
+            relative_path="${source_path#"$package_path"/}"
+            DOTFILES_MANAGED_PATHS["$relative_path"]=1
+            record_scan_root "$relative_path"
+        done < <(find "$package_path" -type f -print0)
+    done
+}
+
+scan_unmanaged() {
+    declare -gA DOTFILES_MANAGED_PATHS=()
+    declare -gA DOTFILES_SCAN_ROOTS=()
+    declare -A reported=()
+    declare -a sorted_roots=()
+    local relative_root target_root target_path relative_path found=0
+
+    load_ignore_patterns
+    collect_managed_tree "$DOTFILES_STOW_DIR"
+
+    if [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
+        collect_managed_tree "$DOTFILES_HOST_DIR" "$DOTFILES_HOST_NAME"
+    fi
+
+    mapfile -t sorted_roots < <(printf '%s\n' "${!DOTFILES_SCAN_ROOTS[@]}" | LC_ALL=C sort -u)
+
+    for relative_root in "${sorted_roots[@]}"; do
+        target_root="$DOTFILES_TARGET_DIR/$relative_root"
+        [[ -d "$target_root" ]] || continue
+
+        while IFS= read -r -d '' target_path; do
+            relative_path="${target_path#"$DOTFILES_TARGET_DIR"/}"
+            [[ -n "${DOTFILES_MANAGED_PATHS[$relative_path]:-}" ]] && continue
+            [[ -n "${reported[$relative_path]:-}" ]] && continue
+            path_is_ignored "$relative_path" && continue
+
+            reported["$relative_path"]=1
+            printf 'unmanaged: ~/%s\n' "$relative_path"
+            found=1
+        done < <(find "$target_root" \( -type f -o -type l \) -print0)
+    done
+
+    ((found == 0)) && say "No unmanaged neighbouring configuration files found."
+}
+
+check_managed_tree() {
+    local package_root=$1
+    local selected_package=${2:-}
+    local package_path source_path relative_path target_path
+    local target_real source_real
+    local -a package_paths=()
+
+    [[ -d "$package_root" ]] || return 0
+
+    if [[ -n "$selected_package" ]]; then
+        [[ -d "$package_root/$selected_package" ]] || return 0
+        package_paths=("$package_root/$selected_package")
+    else
+        while IFS= read -r -d '' package_path; do
+            package_paths+=("$package_path")
+        done < <(find "$package_root" -mindepth 1 -maxdepth 1 -type d -print0)
+    fi
+
+    for package_path in "${package_paths[@]}"; do
+        while IFS= read -r -d '' source_path; do
+            relative_path="${source_path#"$package_path"/}"
+            target_path="$DOTFILES_TARGET_DIR/$relative_path"
+
+            if [[ ! -L "$target_path" ]]; then
+                warn "not linked: ~/$relative_path"
+                DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+            else
+                target_real="$(realpath -e -- "$target_path" 2>/dev/null || true)"
+                source_real="$(realpath -e -- "$source_path" 2>/dev/null || true)"
+                if [[ -z "$target_real" || "$target_real" != "$source_real" ]]; then
+                    warn "wrong link target: ~/$relative_path"
+                    DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+                fi
+            fi
+        done < <(find "$package_path" -type f -print0)
+    done
+}
+
+doctor() {
+    local command_name suspicious_file
+    local -a missing_commands=()
+    DOTFILES_DOCTOR_ERRORS=0
+
+    for command_name in git pacman stow realpath; do
+        command -v "$command_name" >/dev/null 2>&1 \
+            || missing_commands+=("$command_name")
+    done
+
+    if ((${#missing_commands[@]} > 0)); then
+        warn "missing commands: ${missing_commands[*]}"
+        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+    fi
+
+    git -C "$DOTFILES_ROOT_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+        || {
+            warn "repository has not been initialized with Git"
+            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+        }
+
+    check_managed_tree "$DOTFILES_STOW_DIR"
+    if [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
+        check_managed_tree "$DOTFILES_HOST_DIR" "$DOTFILES_HOST_NAME"
+    fi
+
+    while IFS= read -r -d '' suspicious_file; do
+        warn "review sensitive-looking filename: ${suspicious_file#"$DOTFILES_ROOT_DIR"/}"
+        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+    done < <(
+        find "$DOTFILES_STOW_DIR" "$DOTFILES_HOST_DIR" "$DOTFILES_ROOT_DIR/system" \
+            -type f \
+            \( -iname '*credential*' -o -iname '*private*key*' \
+               -o -iname '*access*token*' -o -iname 'id_rsa' \
+               -o -iname 'id_ed25519' -o -iname '*.pem' \) \
+            -print0 2>/dev/null
+    )
+
+    if ((DOTFILES_DOCTOR_ERRORS > 0)); then
+        die "doctor found $DOTFILES_DOCTOR_ERRORS issue(s)"
+    fi
+
+    say "Doctor checks passed."
+}
+
+status() {
+    need_command git
+    git -C "$DOTFILES_ROOT_DIR" status --short --branch
+    git -C "$DOTFILES_ROOT_DIR" diff --stat
+}
+
+main() {
+    local command=${1:-help}
+    (($# == 0)) || shift
+
+    case "$command" in
+        snapshot) (($# == 0)) || die "snapshot accepts no arguments"; snapshot ;;
+        add) add_file "$@" ;;
+        link) run_stow link "$@" ;;
+        unlink) run_stow unlink "$@" ;;
+        dry-run) run_stow dry-run "$@" ;;
+        scan) (($# == 0)) || die "scan accepts no arguments"; scan_unmanaged ;;
+        status) (($# == 0)) || die "status accepts no arguments"; status ;;
+        doctor) (($# == 0)) || die "doctor accepts no arguments"; doctor ;;
+        help|-h|--help) usage ;;
+        *) usage >&2; die "unknown command: $command" ;;
+    esac
+}
+
+main "$@"

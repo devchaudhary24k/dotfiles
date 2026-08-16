@@ -1,0 +1,7 @@
+# Paths are relative to $HOME and use Bash glob syntax.
+# These files may live beside tracked configuration but are generated or
+# intentionally excluded from dotfiles discovery.
+.config/fish/fish_variables
+.config/micro/syntax/*
+.config/micro/colorschemes/*
+

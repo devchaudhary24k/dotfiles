@@ -1,0 +1,12 @@
+# Temporary files produced by the helper.
+packages/*.tmp.*
+
+# Common editor and platform litter.
+*~
+*.swp
+*.swo
+.DS_Store
+
+# Nix build result, if Nix is experimented with later.
+result
+
