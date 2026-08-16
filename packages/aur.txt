@@ -1,2 +1,3 @@
 1password
 spotify
+visual-studio-code-bin

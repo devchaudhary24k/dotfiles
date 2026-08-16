@@ -1,0 +1,12 @@
+# Vim
+*~
+*.swp
+*.swo
+Session.vim
+
+# Merge tools
+*.orig
+
+# Cross-platform filesystem litter
+.DS_Store
+Thumbs.db

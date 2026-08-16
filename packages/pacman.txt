@@ -77,6 +77,7 @@ fsarchiver
 fuse2
 fwupd
 git
+git-delta
 glances
 gparted
 gst-libav
@@ -198,6 +199,7 @@ sof-firmware
 spectacle
 starship
 steam
+stow
 sudo
 switcheroo-control
 sysfsutils

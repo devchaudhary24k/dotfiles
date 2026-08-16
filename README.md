@@ -70,7 +70,7 @@ The repository uses file-level links via Stow's `--no-folding` option. This
 keeps application-created files in the normal home directory until they are
 explicitly reviewed and adopted.
 
-The initial managed set is deliberately small: Fish, Alacritty, Starship,
+The initial managed set is deliberately small: Fish, Git, Alacritty, Starship,
 btop, and Micro's settings file. Fish's generated `fish_variables` and Micro's
 bundled syntax files are excluded.
 

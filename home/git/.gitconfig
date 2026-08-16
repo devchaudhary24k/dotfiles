@@ -1,0 +1,99 @@
+[user]
+	email = 84081651+devchaudhary24k@users.noreply.github.com
+	name = Dev Talan
+
+[core]
+	editor = vim
+	pager = delta
+	whitespace = trailing-space,space-before-tab
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	dark = true
+	hyperlinks = true
+	line-numbers = true
+	navigate = true
+	side-by-side = false
+
+[init]
+	defaultBranch = main
+
+[fetch]
+	prune = true
+	writeCommitGraph = true
+
+[push]
+	default = simple
+	autoSetupRemote = true
+	followTags = true
+	useForceIfIncludes = true
+
+[pull]
+	ff = only
+
+[commit]
+	verbose = true
+
+[branch]
+	sort = -committerdate
+
+[tag]
+	sort = version:refname
+
+[column]
+	ui = auto
+
+[status]
+	showStash = true
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+	colorMovedWS = allow-indentation-change
+	renames = true
+	tool = meld
+
+[merge]
+	conflictStyle = zdiff3
+	tool = meld
+
+[difftool]
+	prompt = false
+
+[mergetool]
+	prompt = false
+	keepBackup = false
+
+[rebase]
+	autoSquash = true
+	autoStash = true
+	updateRefs = true
+	missingCommitsCheck = error
+	rescheduleFailedExec = true
+
+[rerere]
+	enabled = true
+	autoUpdate = true
+
+[worktree]
+	guessRemote = true
+
+[grep]
+	lineNumber = true
+	column = true
+
+[help]
+	autoCorrect = prompt
+
+[alias]
+	lg = log --graph --decorate --oneline
+	lga = log --graph --decorate --oneline --all
+	last = show --stat --summary HEAD
+	branches = branch --sort=-committerdate
+	unstage = restore --staged --
+	fixup = commit --fixup
+	autosquash = rebase --interactive --autosquash
+	pf = push --force-with-lease --force-if-includes
+	root = rev-parse --show-toplevel
