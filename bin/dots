@@ -7,6 +7,8 @@ DOTFILES_ROOT_DIR="$(cd -- "$DOTFILES_BIN_DIR/.." && pwd -P)"
 DOTFILES_STOW_DIR="$DOTFILES_ROOT_DIR/home"
 DOTFILES_HOST_DIR="$DOTFILES_ROOT_DIR/hosts"
 DOTFILES_PACKAGE_DIR="$DOTFILES_ROOT_DIR/packages"
+DOTFILES_COLLECTOR_DIR="$DOTFILES_ROOT_DIR/collectors"
+DOTFILES_SNAPSHOT_DIR="$DOTFILES_ROOT_DIR/snapshots"
 DOTFILES_TARGET_DIR="${HOME:?HOME is not set}"
 DOTFILES_HOST_NAME="$(hostnamectl --static 2>/dev/null || hostname)"
 
@@ -32,7 +34,9 @@ usage() {
 Usage: dots COMMAND [ARGUMENTS]
 
 Commands:
-  snapshot            Regenerate package and enabled-user-service manifests
+  sync [--list|--only NAME]
+                      Refresh packages and every enabled app collector
+  snapshot            Refresh package and enabled-user-service manifests only
   add PACKAGE FILE    Adopt one reviewed regular file into a Stow package
   link [PACKAGE...]   Restow all or selected home packages
   unlink [PACKAGE...] Unstow all or selected home packages
@@ -67,6 +71,7 @@ validate_packages() {
 run_stow() {
     local operation=$1
     shift
+    local requested_package_count=$#
     local -a packages=("$@")
     local -a stow_operation=()
 
@@ -94,13 +99,20 @@ run_stow() {
         "${stow_operation[@]}" \
         "${packages[@]}"
 
-    if (($# == 0)) && [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
+    if ((requested_package_count == 0)) \
+        && [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
         stow \
             --dir="$DOTFILES_HOST_DIR" \
             --target="$DOTFILES_TARGET_DIR" \
             --no-folding \
             "${stow_operation[@]}" \
             "$DOTFILES_HOST_NAME"
+    fi
+
+    if [[ "$operation" == link ]] && ((requested_package_count == 0)); then
+        need_command git
+        git -C "$DOTFILES_ROOT_DIR" config --local core.hooksPath .githooks
+        say "Repository hooks enabled."
     fi
 }
 
@@ -156,6 +168,87 @@ snapshot() {
 
     say "Package and service manifests updated."
     git -C "$DOTFILES_ROOT_DIR" status --short -- packages 2>/dev/null || true
+}
+
+list_collectors() {
+    [[ -d "$DOTFILES_COLLECTOR_DIR" ]] || return 0
+    find "$DOTFILES_COLLECTOR_DIR" -mindepth 1 -maxdepth 1 -type f \
+        -perm -u=x -printf '%f\n' | LC_ALL=C sort
+}
+
+validate_collector_name() {
+    local collector_name=$1
+
+    [[ "$collector_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+        || die "invalid collector name: $collector_name"
+    [[ -f "$DOTFILES_COLLECTOR_DIR/$collector_name" \
+       && -x "$DOTFILES_COLLECTOR_DIR/$collector_name" ]] \
+        || die "unknown or disabled collector: $collector_name"
+}
+
+run_collector() {
+    local collector_name=$1
+
+    validate_collector_name "$collector_name"
+    say "Syncing collector: $collector_name"
+    "$DOTFILES_COLLECTOR_DIR/$collector_name"
+}
+
+snapshot_file_looks_sensitive() {
+    local snapshot_file=$1
+    local assignment_pattern
+
+    assignment_pattern='(api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|server[_-]?password|restore[_-]?token|stream[_-]?key|password|passwd|credential|private[_-]?key)[[:space:]"]*[:=]'
+    LC_ALL=C grep -IqiE -- "$assignment_pattern" "$snapshot_file" \
+        || LC_ALL=C grep -IqiE -- \
+            '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|[?&](token|key|auth|password)=' \
+            "$snapshot_file"
+}
+
+audit_snapshots() {
+    local snapshot_file found=0
+
+    [[ -d "$DOTFILES_SNAPSHOT_DIR" ]] || return 0
+    while IFS= read -r -d '' snapshot_file; do
+        if snapshot_file_looks_sensitive "$snapshot_file"; then
+            warn "sensitive-looking snapshot content: ${snapshot_file#"$DOTFILES_ROOT_DIR"/}"
+            found=1
+        fi
+    done < <(
+        find "$DOTFILES_SNAPSHOT_DIR" -type f ! -name README.md -print0
+    )
+
+    ((found == 0))
+}
+
+sync_all() {
+    local collector_name
+    local -a collectors=()
+
+    case $# in
+        0)
+            snapshot
+            mapfile -t collectors < <(list_collectors)
+            for collector_name in "${collectors[@]}"; do
+                run_collector "$collector_name"
+            done
+            ;;
+        1)
+            [[ "$1" == --list ]] || die "usage: dots sync [--list|--only NAME]"
+            list_collectors
+            return 0
+            ;;
+        2)
+            [[ "$1" == --only ]] || die "usage: dots sync [--list|--only NAME]"
+            run_collector "$2"
+            ;;
+        *)
+            die "usage: dots sync [--list|--only NAME]"
+            ;;
+    esac
+
+    audit_snapshots || die "snapshot safety audit failed"
+    say "Dotfiles sync completed."
 }
 
 path_is_sensitive() {
@@ -393,8 +486,31 @@ check_managed_tree() {
     done
 }
 
+check_collectors() {
+    local collector_file collector_name
+
+    [[ -d "$DOTFILES_COLLECTOR_DIR" ]] || return 0
+    while IFS= read -r -d '' collector_file; do
+        collector_name="$(basename -- "$collector_file")"
+        [[ "$collector_name" == README.md ]] && continue
+
+        if [[ ! "$collector_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+            warn "invalid collector filename: collectors/$collector_name"
+            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+        elif [[ ! -x "$collector_file" ]]; then
+            warn "collector is disabled because it is not executable: $collector_name"
+            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+        elif ! "$collector_file" --check; then
+            warn "collector check failed: $collector_name"
+            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+        fi
+    done < <(
+        find "$DOTFILES_COLLECTOR_DIR" -mindepth 1 -maxdepth 1 -type f -print0
+    )
+}
+
 doctor() {
-    local command_name suspicious_file
+    local command_name suspicious_file hooks_path
     local -a missing_commands=()
     DOTFILES_DOCTOR_ERRORS=0
 
@@ -414,16 +530,29 @@ doctor() {
             DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
         }
 
+    hooks_path="$(git -C "$DOTFILES_ROOT_DIR" config --local --get core.hooksPath \
+        2>/dev/null || true)"
+    if [[ "$hooks_path" != .githooks ]]; then
+        warn "repository hooks are not enabled; run: dots link"
+        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
+    fi
+
     check_managed_tree "$DOTFILES_STOW_DIR"
     if [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
         check_managed_tree "$DOTFILES_HOST_DIR" "$DOTFILES_HOST_NAME"
+    fi
+    check_collectors
+
+    if ! audit_snapshots; then
+        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
     fi
 
     while IFS= read -r -d '' suspicious_file; do
         warn "review sensitive-looking filename: ${suspicious_file#"$DOTFILES_ROOT_DIR"/}"
         DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
     done < <(
-        find "$DOTFILES_STOW_DIR" "$DOTFILES_HOST_DIR" "$DOTFILES_ROOT_DIR/system" \
+        find "$DOTFILES_STOW_DIR" "$DOTFILES_HOST_DIR" \
+            "$DOTFILES_ROOT_DIR/system" "$DOTFILES_SNAPSHOT_DIR" \
             -type f \
             \( -iname '*credential*' -o -iname '*private*key*' \
                -o -iname '*access*token*' -o -iname 'id_rsa' \
@@ -449,6 +578,7 @@ main() {
     (($# == 0)) || shift
 
     case "$command" in
+        sync) sync_all "$@" ;;
         snapshot) (($# == 0)) || die "snapshot accepts no arguments"; snapshot ;;
         add) add_file "$@" ;;
         link) run_stow link "$@" ;;

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+HOOK_REPOSITORY_DIR="$(git rev-parse --show-toplevel)"
+
+"$HOOK_REPOSITORY_DIR/bin/dots" sync
+git -C "$HOOK_REPOSITORY_DIR" add -- packages snapshots

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+DOTFILES_REPOSITORY_DIR="${DOTFILES_REPOSITORY:-${HOME:?HOME is not set}/.dotfiles}"
+DOTFILES_COMMAND="$DOTFILES_REPOSITORY_DIR/bin/dots"
+
+if [[ ! -x "$DOTFILES_COMMAND" ]]; then
+    printf 'error: dotfiles command not found or not executable: %s\n' \
+        "$DOTFILES_COMMAND" >&2
+    exit 1
+fi
+
+exec "$DOTFILES_COMMAND" "$@"
+

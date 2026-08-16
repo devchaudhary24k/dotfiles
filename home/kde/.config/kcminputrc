@@ -1,0 +1,6 @@
+[Libinput][1133][16500][Logitech G304]
+PointerAcceleration=-0.400
+PointerAccelerationProfile=1
+
+[Mouse]
+cursorTheme=capitaine-cursors

@@ -78,6 +78,7 @@ fuse2
 fwupd
 git
 git-delta
+github-cli
 glances
 gparted
 gst-libav

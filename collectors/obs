@@ -1,0 +1,175 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+OBS_BIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+OBS_REPOSITORY_DIR="$(cd -- "$OBS_BIN_DIR/.." && pwd -P)"
+OBS_SOURCE_DIR="${XDG_CONFIG_HOME:-${HOME:?HOME is not set}/.config}/obs-studio"
+OBS_SNAPSHOT_DIR="$OBS_REPOSITORY_DIR/snapshots/obs"
+OBS_SENSITIVE_KEY_PATTERN='password|passwd|token|secret|auth|stream.?key|credential'
+
+obs_die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+obs_require() {
+    command -v "$1" >/dev/null 2>&1 \
+        || obs_die "required command not found: $1"
+}
+
+obs_destination() {
+    local source_file=$1
+    printf '%s/%s\n' "$OBS_SNAPSHOT_DIR" "${source_file#"$OBS_SOURCE_DIR"/}"
+}
+
+obs_check_plain_file() {
+    local source_file=$1
+    local assignment_pattern
+    assignment_pattern="($OBS_SENSITIVE_KEY_PATTERN)[[:space:]]*="
+
+    if LC_ALL=C grep -IqiE -- "$assignment_pattern" "$source_file"; then
+        obs_die "sensitive-looking assignment found in ${source_file#"$OBS_SOURCE_DIR"/}"
+    fi
+}
+
+obs_check_json_file() {
+    local source_file=$1
+
+    jq empty "$source_file" \
+        || obs_die "invalid JSON: ${source_file#"$OBS_SOURCE_DIR"/}"
+    if ! jq -e --arg sensitive "$OBS_SENSITIVE_KEY_PATTERN" '
+        [
+            paths(scalars) as $path
+            | select($path[-1] | tostring | test($sensitive; "i"))
+        ]
+        | length == 0
+    ' "$source_file" >/dev/null; then
+        obs_die "sensitive-looking JSON key found in ${source_file#"$OBS_SOURCE_DIR"/}"
+    fi
+}
+
+obs_copy_plain() {
+    local source_file=$1
+    local destination_file
+
+    obs_check_plain_file "$source_file"
+    destination_file="$(obs_destination "$source_file")"
+    install -Dm0644 -- "$source_file" "$destination_file"
+    printf 'saved: %s\n' "${destination_file#"$OBS_REPOSITORY_DIR"/}"
+}
+
+obs_copy_json() {
+    local source_file=$1
+    local destination_file
+
+    obs_check_json_file "$source_file"
+    destination_file="$(obs_destination "$source_file")"
+    install -Dm0644 -- "$source_file" "$destination_file"
+    printf 'saved: %s\n' "${destination_file#"$OBS_REPOSITORY_DIR"/}"
+}
+
+obs_copy_sanitized_scene() {
+    local source_file=$1
+    local destination_file temporary_file
+
+    jq empty "$source_file" \
+        || obs_die "invalid scene JSON: ${source_file#"$OBS_SOURCE_DIR"/}"
+    destination_file="$(obs_destination "$source_file")"
+    mkdir -p -- "$(dirname -- "$destination_file")"
+    temporary_file="$(mktemp "${destination_file}.tmp.XXXXXX")"
+
+    jq --arg sensitive "$OBS_SENSITIVE_KEY_PATTERN" '
+        walk(
+            if type == "object" then
+                with_entries(select((.key | test($sensitive; "i")) | not))
+            else
+                .
+            end
+        )
+    ' "$source_file" >"$temporary_file"
+
+    if jq -e --arg sensitive "$OBS_SENSITIVE_KEY_PATTERN" '
+        [
+            paths(scalars) as $path
+            | select($path[-1] | tostring | test($sensitive; "i"))
+        ]
+        | length == 0
+    ' "$temporary_file" >/dev/null \
+        && ! LC_ALL=C grep -IqiE -- \
+            '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|[?&](token|key|auth|password)=' \
+            "$temporary_file"; then
+        chmod 0644 "$temporary_file"
+        mv -f -- "$temporary_file" "$destination_file"
+    else
+        rm -f -- "$temporary_file"
+        obs_die "scene sanitization check failed: ${source_file#"$OBS_SOURCE_DIR"/}"
+    fi
+
+    printf 'saved sanitized: %s\n' \
+        "${destination_file#"$OBS_REPOSITORY_DIR"/}"
+}
+
+obs_check_environment() {
+    obs_require jq
+    obs_require install
+    obs_require pgrep
+    [[ -d "$OBS_SOURCE_DIR" ]] \
+        || obs_die "OBS configuration not found: $OBS_SOURCE_DIR"
+}
+
+main() {
+    local source_file base_name
+
+    case ${1:-} in
+        --check)
+            (($# == 1)) || obs_die "usage: collectors/obs [--check]"
+            obs_check_environment
+            printf 'OBS collector check passed.\n'
+            return 0
+            ;;
+        '')
+            (($# == 0)) || obs_die "usage: collectors/obs [--check]"
+            ;;
+        *)
+            obs_die "usage: collectors/obs [--check]"
+            ;;
+    esac
+
+    obs_check_environment
+
+    if pgrep -x obs >/dev/null 2>&1; then
+        obs_die "close OBS before exporting its configuration"
+    fi
+
+    for source_file in "$OBS_SOURCE_DIR/global.ini" "$OBS_SOURCE_DIR/user.ini"; do
+        [[ -f "$source_file" ]] && obs_copy_plain "$source_file"
+    done
+
+    if [[ -d "$OBS_SOURCE_DIR/basic/profiles" ]]; then
+        while IFS= read -r -d '' source_file; do
+            base_name="$(basename -- "$source_file")"
+            case "$base_name" in
+                basic.ini) obs_copy_plain "$source_file" ;;
+                recordEncoder.json|streamEncoder.json) obs_copy_json "$source_file" ;;
+            esac
+        done < <(
+            find "$OBS_SOURCE_DIR/basic/profiles" -type f \
+                \( -name basic.ini -o -name recordEncoder.json \
+                   -o -name streamEncoder.json \) -print0
+        )
+    fi
+
+    if [[ -d "$OBS_SOURCE_DIR/basic/scenes" ]]; then
+        while IFS= read -r -d '' source_file; do
+            obs_copy_sanitized_scene "$source_file"
+        done < <(
+            find "$OBS_SOURCE_DIR/basic/scenes" -maxdepth 1 -type f \
+                -name '*.json' ! -name '*.bak' -print0
+        )
+    fi
+
+    printf 'OBS snapshot refreshed successfully.\n'
+}
+
+main "$@"
