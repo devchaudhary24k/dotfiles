@@ -1,0 +1,184 @@
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor page for nukebyte
+
+[Face-61000000000001][Appearance]
+Title=Operating System and Host
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-61000000000001][SensorColors]
+os/system/hostname=61,174,233
+os/system/name=0,200,160
+os/system/prettyName=0,200,160
+os/system/version=120,120,140
+os/system/url=0,188,174
+os/system/uptime=246,166,35
+os/system/logo=179,136,255
+
+[Face-61000000000001][SensorLabels]
+os/system/hostname=Hostname
+os/system/name=Operating system
+os/system/prettyName=OS and version
+os/system/version=OS version
+os/system/url=OS project URL
+os/system/uptime=Uptime
+os/system/logo=OS logo
+
+[Face-61000000000001][Sensors]
+highPrioritySensorIds=["os/system/hostname","os/system/name","os/system/prettyName","os/system/version","os/system/url","os/system/uptime","os/system/logo"]
+
+[Face-61000000000001][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[Face-61000000000002][Appearance]
+Title=Kernel
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-61000000000002][SensorColors]
+os/kernel/name=179,136,255
+os/kernel/prettyName=179,136,255
+os/kernel/version=120,120,140
+
+[Face-61000000000002][SensorLabels]
+os/kernel/name=Kernel
+os/kernel/prettyName=Kernel and version
+os/kernel/version=Kernel version
+
+[Face-61000000000002][Sensors]
+highPrioritySensorIds=["os/kernel/name","os/kernel/prettyName","os/kernel/version"]
+
+[Face-61000000000002][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[Face-61000000000003][Appearance]
+Title=KDE Software Stack
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-61000000000003][SensorColors]
+os/plasma/plasmaVersion=61,174,233
+os/plasma/kfVersion=0,200,160
+os/plasma/qtVersion=179,136,255
+os/plasma/windowsystem=0,188,174
+
+[Face-61000000000003][SensorLabels]
+os/plasma/plasmaVersion=Plasma
+os/plasma/kfVersion=KDE Frameworks
+os/plasma/qtVersion=Qt
+os/plasma/windowsystem=Window system
+
+[Face-61000000000003][Sensors]
+highPrioritySensorIds=["os/plasma/plasmaVersion","os/plasma/kfVersion","os/plasma/qtVersion","os/plasma/windowsystem"]
+
+[Face-61000000000003][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[Face-61000000000004][Appearance]
+Title=Hardware and Aggregate Sensor Context
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-61000000000004][SensorColors]
+cpu/all/name=61,174,233
+cpu/all/coreCount=61,174,233
+cpu/all/cpuCount=61,174,233
+memory/physical/total=0,200,160
+memory/swap/total=179,136,255
+gpu/gpu0/name=118,185,0
+gpu/gpu0/totalVram=120,120,140
+gpu/gpu1/name=237,90,70
+gpu/gpu1/totalVram=120,120,140
+gpu/all/usage=246,166,35
+gpu/all/usedVram=0,188,174
+gpu/all/totalVram=120,120,140
+disk/nvme0n1/name=0,188,174
+disk/nvme0n1/total=120,120,140
+network/enp2s0/network=0,200,160
+
+[Face-61000000000004][SensorLabels]
+cpu/all/name=CPU
+cpu/all/coreCount=Physical cores
+cpu/all/cpuCount=CPU packages
+memory/physical/total=Physical memory
+memory/swap/total=zram swap
+gpu/gpu0/name=GPU 0
+gpu/gpu0/totalVram=GPU 0 VRAM
+gpu/gpu1/name=GPU 1
+gpu/gpu1/totalVram=GPU 1 shared memory
+gpu/all/usage=All-GPU aggregate usage
+gpu/all/usedVram=All-GPU memory used
+gpu/all/totalVram=All-GPU memory total
+disk/nvme0n1/name=Physical drive
+disk/nvme0n1/total=Physical capacity
+network/enp2s0/network=Active connection
+
+[Face-61000000000004][Sensors]
+highPrioritySensorIds=["cpu/all/name","cpu/all/coreCount","cpu/all/cpuCount","memory/physical/total","memory/swap/total","gpu/gpu0/name","gpu/gpu0/totalVram","gpu/gpu1/name","gpu/gpu1/totalVram","gpu/all/usage","gpu/all/usedVram","gpu/all/totalVram","disk/nvme0n1/name","disk/nvme0n1/total","network/enp2s0/network"]
+
+[Face-61000000000004][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[page]
+Title=System & Sensor Coverage
+actionsFace=
+icon=computer
+loadType=ondemand
+margin=1
+version=1
+
+[page][row-0]
+Title=
+heightMode=half
+isTitle=false
+name=row-0
+
+[page][row-0][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-0][column-0][section-0]
+face=Face-61000000000001
+isSeparator=false
+name=section-0
+
+[page][row-0][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-0][column-1][section-0]
+face=Face-61000000000002
+isSeparator=false
+name=section-0
+
+[page][row-1]
+Title=
+heightMode=half
+isTitle=false
+name=row-1
+
+[page][row-1][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-1][column-0][section-0]
+face=Face-61000000000003
+isSeparator=false
+name=section-0
+
+[page][row-1][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-1][column-1][section-0]
+face=Face-61000000000004
+isSeparator=false
+name=section-0

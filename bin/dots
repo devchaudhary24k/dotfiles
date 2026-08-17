@@ -9,6 +9,7 @@ DOTFILES_HOST_DIR="$DOTFILES_ROOT_DIR/hosts"
 DOTFILES_PACKAGE_DIR="$DOTFILES_ROOT_DIR/packages"
 DOTFILES_COLLECTOR_DIR="$DOTFILES_ROOT_DIR/collectors"
 DOTFILES_SNAPSHOT_DIR="$DOTFILES_ROOT_DIR/snapshots"
+DOTFILES_SYSTEM_DIR="$DOTFILES_ROOT_DIR/system"
 DOTFILES_TARGET_DIR="${HOME:?HOME is not set}"
 DOTFILES_HOST_NAME="$(hostnamectl --static 2>/dev/null || hostname)"
 
@@ -43,6 +44,9 @@ Commands:
   dry-run [PACKAGE...]
                       Preview links for all or selected home packages
   scan                Report unmanaged files near tracked configurations
+  machine ACTION [HOST] [ARGUMENTS...]
+                      Inspect or restore a host-labelled system profile
+  tui                 Open the interactive terminal interface
   status              Show Git status and a diff summary
   doctor              Check dependencies, managed links, and secret risks
   help                 Show this help
@@ -249,6 +253,44 @@ sync_all() {
 
     audit_snapshots || die "snapshot safety audit failed"
     say "Dotfiles sync completed."
+}
+
+list_machines() {
+    local machine_directory
+
+    [[ -d "$DOTFILES_SYSTEM_DIR" ]] || return 0
+    while IFS= read -r -d '' machine_directory; do
+        [[ -x "$machine_directory/security" ]] \
+            && basename -- "$machine_directory"
+    done < <(
+        find "$DOTFILES_SYSTEM_DIR" -mindepth 1 -maxdepth 1 -type d -print0
+    ) | LC_ALL=C sort
+}
+
+machine_command() {
+    local action=${1:-status}
+    local machine_name machine_script
+    (($# == 0)) || shift
+
+    if [[ "$action" == list ]]; then
+        (($# == 0)) || die "machine list accepts no arguments"
+        list_machines
+        return 0
+    fi
+
+    case "$action" in
+        status|plan|doctor|apply) ;;
+        *) die "usage: dots machine {list|status|plan|doctor|apply} [HOST] [ARGUMENTS...]" ;;
+    esac
+
+    machine_name=${1:-$DOTFILES_HOST_NAME}
+    (($# == 0)) || shift
+    [[ "$machine_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
+        || die "invalid machine name: $machine_name"
+    machine_script="$DOTFILES_SYSTEM_DIR/$machine_name/security"
+    [[ -x "$machine_script" ]] || die "unknown machine profile: $machine_name"
+
+    "$machine_script" "$action" "$@"
 }
 
 path_is_sensitive() {
@@ -585,6 +627,8 @@ main() {
         unlink) run_stow unlink "$@" ;;
         dry-run) run_stow dry-run "$@" ;;
         scan) (($# == 0)) || die "scan accepts no arguments"; scan_unmanaged ;;
+        machine) machine_command "$@" ;;
+        tui) "$DOTFILES_ROOT_DIR/bin/dots-tui" "$@" ;;
         status) (($# == 0)) || die "status accepts no arguments"; status ;;
         doctor) (($# == 0)) || die "doctor accepts no arguments"; doctor ;;
         help|-h|--help) usage ;;

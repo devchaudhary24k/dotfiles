@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor page for nukebyte
+
+[Face-60000000000001][Appearance]
+Title=Processes · CPU, Memory, Network and I/O
+chartFace=org.kde.ksysguard.processtable
+showTitle=true
+
+[Face-60000000000001][org.kde.ksysguard.processtable][General]
+askWhenKilling=true
+columnWidths=0.25,0.11,0.11,0.10,0.10,0.11,0.11,0.11
+showDetails=false
+showToolBar=true
+sortColumn=usage
+sortDirection=1
+sortedColumns=name,usage,memory,sharedMemory,netInbound,netOutbound,ioCharactersActuallyReadRate,ioCharactersActuallyWrittenRate
+userFilterMode=3
+viewMode=0
+
+[page]
+Title=Processes · Operational Triage
+actionsFace=
+icon=view-process-system
+loadType=ondemand
+margin=1
+version=1
+
+[page][row-0]
+Title=
+heightMode=maximum
+isTitle=false
+name=row-0
+
+[page][row-0][column-0]
+name=column-0
+noMargins=true
+showBackground=true
+
+[page][row-0][column-0][section-0]
+face=Face-60000000000001
+isSeparator=false
+name=section-0
+

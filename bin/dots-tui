@@ -1,0 +1,244 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+TUI_BIN_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+TUI_REPOSITORY="$(cd -- "$TUI_BIN_DIRECTORY/.." && pwd -P)"
+TUI_DOTS="$TUI_REPOSITORY/bin/dots"
+
+tui_die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+tui_dimensions() {
+    local terminal_lines terminal_columns
+    terminal_lines="$(tput lines 2>/dev/null || printf '30')"
+    terminal_columns="$(tput cols 2>/dev/null || printf '100')"
+    ((terminal_lines < 24)) && terminal_lines=24
+    ((terminal_columns < 80)) && terminal_columns=80
+    ((terminal_lines > 42)) && terminal_lines=42
+    ((terminal_columns > 120)) && terminal_columns=120
+    TUI_HEIGHT=$((terminal_lines - 2))
+    TUI_WIDTH=$((terminal_columns - 4))
+    TUI_MENU_HEIGHT=$((TUI_HEIGHT - 8))
+}
+
+tui_confirm() {
+    local title=$1 message=$2
+    whiptail --title "$title" --yesno "$message" 12 "$TUI_WIDTH"
+}
+
+tui_input() {
+    local title=$1 prompt=$2 default_value=${3:-}
+    whiptail --title "$title" --inputbox "$prompt" 12 "$TUI_WIDTH" \
+        "$default_value" 3>&1 1>&2 2>&3
+}
+
+tui_capture() {
+    local title=$1
+    shift
+    local output_file command_status
+
+    output_file="$(mktemp /tmp/dots-tui-output.XXXXXX)"
+    set +e
+    "$@" >"$output_file" 2>&1
+    command_status=$?
+    set -e
+    [[ -s "$output_file" ]] \
+        || printf 'Command completed without output.\n' >"$output_file"
+    whiptail --title "$title — exit $command_status" --scrolltext \
+        --textbox "$output_file" "$TUI_HEIGHT" "$TUI_WIDTH" || true
+    unlink -- "$output_file"
+}
+
+tui_foreground() {
+    local title=$1
+    shift
+    local command_status
+
+    clear
+    printf '%s\n\n' "== $title =="
+    set +e
+    "$@"
+    command_status=$?
+    set -e
+    printf '\nExit status: %s\nPress Enter to return to the TUI.' "$command_status"
+    read -r
+}
+
+tui_choose_package() {
+    local prompt=$1 package
+    local -a menu_items=()
+
+    while IFS= read -r package; do
+        [[ -n "$package" ]] && menu_items+=("$package" "Stow package")
+    done < <(find "$TUI_REPOSITORY/home" -mindepth 1 -maxdepth 1 \
+        -type d -printf '%f\n' | LC_ALL=C sort)
+    ((${#menu_items[@]} > 0)) || return 1
+
+    whiptail --title "Dotfiles packages" --menu "$prompt" \
+        "$TUI_HEIGHT" "$TUI_WIDTH" "$TUI_MENU_HEIGHT" \
+        "${menu_items[@]}" 3>&1 1>&2 2>&3
+}
+
+tui_choose_collector() {
+    local collector
+    local -a menu_items=()
+
+    while IFS= read -r collector; do
+        [[ -n "$collector" ]] && menu_items+=("$collector" "Enabled collector")
+    done < <("$TUI_DOTS" sync --list)
+    ((${#menu_items[@]} > 0)) || return 1
+
+    whiptail --title "Sync collectors" --menu "Choose a collector" \
+        "$TUI_HEIGHT" "$TUI_WIDTH" "$TUI_MENU_HEIGHT" \
+        "${menu_items[@]}" 3>&1 1>&2 2>&3
+}
+
+tui_choose_machine() {
+    local machine
+    local -a menu_items=()
+
+    while IFS= read -r machine; do
+        [[ -n "$machine" ]] && menu_items+=("$machine" "System recovery profile")
+    done < <("$TUI_DOTS" machine list)
+    ((${#menu_items[@]} > 0)) || return 1
+
+    whiptail --title "Machine profiles" --menu "Choose a machine" \
+        "$TUI_HEIGHT" "$TUI_WIDTH" "$TUI_MENU_HEIGHT" \
+        "${menu_items[@]}" 3>&1 1>&2 2>&3
+}
+
+tui_add_config() {
+    local package path
+    package="$(tui_input "Adopt configuration" "Stow package name:" '')" || return 0
+    [[ -n "$package" ]] || return 0
+    path="$(tui_input "Adopt configuration" "Existing configuration file:" "$HOME/.config/")" \
+        || return 0
+    [[ -n "$path" ]] || return 0
+    tui_capture "Adopt $path" "$TUI_DOTS" add "$package" "$path"
+}
+
+tui_machine_menu() {
+    local machine action backup_path
+    machine="$(tui_choose_machine)" || return 0
+
+    while true; do
+        action="$(whiptail --title "Machine: $machine" --menu \
+            "Security and recovery actions" "$TUI_HEIGHT" "$TUI_WIDTH" \
+            "$TUI_MENU_HEIGHT" \
+            status "Show public security status" \
+            plan "Show guarded restore plan" \
+            doctor "Run full read-only checks with sudo" \
+            apply "Apply public Limine/mkinitcpio config" \
+            enroll "Apply config and enroll TPM with header backup" \
+            back "Return to main menu" \
+            3>&1 1>&2 2>&3)" || return 0
+
+        case "$action" in
+            status) tui_capture "Security status: $machine" "$TUI_DOTS" machine status "$machine" ;;
+            plan) tui_capture "Security plan: $machine" "$TUI_DOTS" machine plan "$machine" ;;
+            doctor)
+                tui_foreground "Security doctor: $machine" sudo "$TUI_DOTS" machine doctor "$machine"
+                ;;
+            apply)
+                if tui_confirm "Apply system configuration" \
+                    "This requests root access, backs up /etc configuration, and regenerates Limine/initramfs. Continue?"; then
+                    tui_foreground "Apply security profile: $machine" \
+                        sudo "$TUI_DOTS" machine apply "$machine"
+                fi
+                ;;
+            enroll)
+                backup_path="$(tui_input "TPM enrollment" \
+                    "New LUKS header backup path on encrypted external storage:" '')" || continue
+                [[ -n "$backup_path" ]] || continue
+                if tui_confirm "TPM enrollment" \
+                    "This creates an external header backup and may add a PCR-7 TPM token. It never removes a keyslot. Continue?"; then
+                    tui_foreground "Apply and enroll TPM: $machine" \
+                        sudo "$TUI_DOTS" machine apply "$machine" \
+                        --enroll-tpm --header-backup "$backup_path"
+                fi
+                ;;
+            back) return 0 ;;
+        esac
+    done
+}
+
+tui_check() {
+    command -v whiptail >/dev/null 2>&1 || tui_die "whiptail is required (package: libnewt)"
+    [[ -x "$TUI_DOTS" ]] || tui_die "dots implementation is not executable"
+    "$TUI_DOTS" sync --list >/dev/null
+    "$TUI_DOTS" machine list >/dev/null
+    printf 'TUI checks passed.\n'
+}
+
+tui_main() {
+    local choice package collector
+
+    tui_check >/dev/null
+    tui_dimensions
+    while true; do
+        choice="$(whiptail --title "dots — $USER@$(hostname)" --menu \
+            "Dotfiles, application snapshots, and machine recovery" \
+            "$TUI_HEIGHT" "$TUI_WIDTH" "$TUI_MENU_HEIGHT" \
+            sync "Refresh packages and every collector" \
+            collector "Refresh one application collector" \
+            snapshot "Refresh package manifests only" \
+            add "Adopt a reviewed configuration file" \
+            link-all "Link all home and current-host packages" \
+            link-one "Link one home package" \
+            unlink "Unlink one home package" \
+            dry-run "Preview all Stow operations" \
+            scan "Find unmanaged neighbouring config" \
+            status "Show Git status and diff summary" \
+            doctor "Validate links, collectors, hooks, and secrets" \
+            machine "Secure Boot, TPM, LUKS, and recovery" \
+            help "Show CLI documentation" \
+            exit "Close dots" \
+            3>&1 1>&2 2>&3)" || break
+
+        case "$choice" in
+            sync) tui_capture "Sync all" "$TUI_DOTS" sync ;;
+            collector)
+                collector="$(tui_choose_collector)" || continue
+                tui_capture "Sync collector: $collector" "$TUI_DOTS" sync --only "$collector"
+                ;;
+            snapshot) tui_capture "Package snapshot" "$TUI_DOTS" snapshot ;;
+            add) tui_add_config ;;
+            link-all) tui_capture "Link all packages" "$TUI_DOTS" link ;;
+            link-one)
+                package="$(tui_choose_package "Choose a package to link")" || continue
+                tui_capture "Link package: $package" "$TUI_DOTS" link "$package"
+                ;;
+            unlink)
+                package="$(tui_choose_package "Choose a package to unlink")" || continue
+                if tui_confirm "Unlink $package" "Remove this package's managed links?"; then
+                    tui_capture "Unlink package: $package" "$TUI_DOTS" unlink "$package"
+                fi
+                ;;
+            dry-run) tui_capture "Stow dry run" "$TUI_DOTS" dry-run ;;
+            scan) tui_capture "Unmanaged configuration scan" "$TUI_DOTS" scan ;;
+            status) tui_capture "Repository status" "$TUI_DOTS" status ;;
+            doctor) tui_capture "Dotfiles doctor" "$TUI_DOTS" doctor ;;
+            machine) tui_machine_menu ;;
+            help) tui_capture "dots help" "$TUI_DOTS" help ;;
+            exit) break ;;
+        esac
+    done
+    clear
+}
+
+case ${1:-} in
+    --check)
+        (($# == 1)) || tui_die "usage: dots tui [--check]"
+        tui_check
+        ;;
+    '')
+        (($# == 0)) || tui_die "usage: dots tui [--check]"
+        tui_main
+        ;;
+    *)
+        tui_die "usage: dots tui [--check]"
+        ;;
+esac

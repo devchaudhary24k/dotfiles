@@ -1,0 +1,433 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+SECURITY_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+SECURITY_REPOSITORY="$(cd -- "$SECURITY_DIRECTORY/../.." && pwd -P)"
+SECURITY_PROFILE="$SECURITY_DIRECTORY/security-profile.conf"
+SECURITY_LIMINE_TEMPLATE="$SECURITY_DIRECTORY/etc/default/limine.template"
+SECURITY_MKINITCPIO_DROPIN_DIRECTORY="$SECURITY_DIRECTORY/etc/mkinitcpio.conf.d"
+
+# shellcheck source=security-profile.conf
+source "$SECURITY_PROFILE"
+
+security_say() {
+    printf '%s\n' "$*"
+}
+
+security_warn() {
+    printf 'warning: %s\n' "$*" >&2
+}
+
+security_die() {
+    printf 'error: %s\n' "$*" >&2
+    exit 1
+}
+
+security_need() {
+    command -v "$1" >/dev/null 2>&1 \
+        || security_die "required command not found: $1"
+}
+
+security_usage() {
+    cat <<'EOF'
+Usage: security COMMAND [OPTIONS]
+
+Commands:
+  status                 Show the public machine and boot-security state
+  plan                   Explain the guarded restore sequence
+  doctor                 Validate the current setup without changing it
+  apply [OPTIONS]        Apply public Limine/mkinitcpio configuration
+
+Apply options:
+  --enroll-tpm           Enroll TPM2 PCR 7 only when no TPM token exists
+  --header-backup PATH   Required external LUKS header backup for enrollment
+EOF
+}
+
+security_dmi_value() {
+    local field=$1
+    tr -d '\n' <"/sys/class/dmi/id/$field" 2>/dev/null || true
+}
+
+security_assert_machine() {
+    local vendor product
+    vendor="$(security_dmi_value sys_vendor)"
+    product="$(security_dmi_value product_name)"
+
+    [[ "$vendor" == "$EXPECTED_SYS_VENDOR" ]] \
+        || security_die "wrong system vendor: $vendor"
+    [[ "$product" == "$EXPECTED_PRODUCT_NAME" ]] \
+        || security_die "wrong machine model: $product"
+}
+
+security_root_mapper() {
+    local root_source
+    root_source="$(findmnt -nro SOURCE -T /)"
+    printf '%s\n' "${root_source%%\[*}"
+}
+
+security_luks_device() {
+    local mapper device
+    mapper="$(security_root_mapper)"
+    device="$(lsblk -spno PKNAME "$mapper" | sed -n '/[^[:space:]]/p' | head -n1)"
+    [[ -n "$device" ]] || security_die "could not resolve encrypted root device"
+    printf '%s\n' "$device"
+}
+
+security_luks_uuid() {
+    local device=$1 uuid
+    uuid="$(lsblk -ndo UUID "$device")"
+    [[ -n "$uuid" ]] || security_die "could not resolve LUKS UUID for $device"
+    printf '%s\n' "$uuid"
+}
+
+security_sbctl_status() {
+    sbctl status 2>&1
+}
+
+security_has_tpm_token() {
+    local device=$1
+    cryptsetup luksDump --dump-json-metadata "$device" \
+        | jq -e 'any((.tokens // {})[]; .type == "systemd-tpm2")' >/dev/null
+}
+
+security_has_expected_tpm_policy() {
+    local device=$1
+    cryptsetup luksDump --dump-json-metadata "$device" \
+        | jq -e --argjson expected_pcr "$TPM2_PCRS" '
+            any((.tokens // {})[];
+                .type == "systemd-tpm2"
+                and (."tpm2-pcrs" // []) == [$expected_pcr])
+        ' >/dev/null
+}
+
+security_keyslot_count() {
+    local device=$1
+    cryptsetup luksDump --dump-json-metadata "$device" \
+        | jq -r '(.keyslots // {}) | length'
+}
+
+security_status() {
+    local device uuid hostname vendor product
+    security_need findmnt
+    security_need lsblk
+    security_need sbctl
+
+    device="$(security_luks_device)"
+    uuid="$(security_luks_uuid "$device")"
+    hostname="$(hostnamectl --static 2>/dev/null || hostname)"
+    vendor="$(security_dmi_value sys_vendor)"
+    product="$(security_dmi_value product_name)"
+
+    printf 'Machine:       %s\n' "$MACHINE_LABEL"
+    printf 'Hostname:      %s\n' "$hostname"
+    printf 'Detected DMI:  %s / %s\n' "$vendor" "$product"
+    printf 'LUKS device:   %s\n' "$device"
+    printf 'LUKS UUID:     %s\n' "$uuid"
+    printf 'Recorded root: %s (%s)\n' "$CURRENT_LUKS_DEVICE" "$CURRENT_LUKS_UUID"
+    printf 'TPM policy:    PCR %s\n' "$TPM2_PCRS"
+    printf 'Recovery:      password keyslot must remain available\n\n'
+    security_sbctl_status
+
+    if ((EUID == 0)); then
+        printf '\nLUKS keyslots: %s\n' "$(security_keyslot_count "$device")"
+        if security_has_tpm_token "$device"; then
+            printf 'TPM token:     enrolled\n'
+        else
+            printf 'TPM token:     not enrolled\n'
+        fi
+    else
+        printf '\nRun through sudo for LUKS keyslot/token inspection.\n'
+    fi
+}
+
+security_plan() {
+    local device uuid
+    security_need findmnt
+    security_need lsblk
+    device="$(security_luks_device)"
+    uuid="$(security_luks_uuid "$device")"
+
+    cat <<EOF
+Machine profile: $MACHINE_LABEL
+Detected root:   $device
+Detected UUID:   $uuid
+
+Public apply plan:
+  1. Verify DMI identity and LUKS2 root.
+  2. Require restored sbctl PK/KEK/db private keys.
+  3. Refuse Secure Boot Setup Mode.
+  4. Back up existing Limine and mkinitcpio config under /etc.
+  5. Render /etc/default/limine with the detected LUKS UUID.
+  6. Restore the reviewed mkinitcpio order, hardware/snapshot drop-ins, and
+     Limine update hooks.
+  7. Enroll the Limine config checksum and regenerate verified boot entries.
+
+Optional TPM enrollment additionally:
+  8. Require Secure Boot to already be enabled.
+  9. Write a fresh LUKS header backup to encrypted external storage.
+ 10. Add a PCR-$TPM2_PCRS TPM token only if one is not already present.
+
+The script never creates/replaces Secure Boot keys and never removes LUKS
+keyslots. Firmware actions and recovery-passphrase testing remain manual gates.
+EOF
+}
+
+security_doctor() {
+    local errors=0 device uuid hostname vendor product sbctl_output hooks_line
+    local required_hook
+
+    for command_name in cryptsetup findmnt grep jq lsblk sbctl; do
+        if ! command -v "$command_name" >/dev/null 2>&1; then
+            security_warn "missing command: $command_name"
+            errors=$((errors + 1))
+        fi
+    done
+    ((errors == 0)) || security_die "machine doctor is missing dependencies"
+
+    device="$(security_luks_device)"
+    uuid="$(security_luks_uuid "$device")"
+    hostname="$(hostnamectl --static 2>/dev/null || hostname)"
+    vendor="$(security_dmi_value sys_vendor)"
+    product="$(security_dmi_value product_name)"
+
+    [[ "$hostname" == "$EXPECTED_HOSTNAME" ]] \
+        || { security_warn "hostname is $hostname, expected $EXPECTED_HOSTNAME"; errors=$((errors + 1)); }
+    [[ "$vendor" == "$EXPECTED_SYS_VENDOR" ]] \
+        || { security_warn "unexpected system vendor: $vendor"; errors=$((errors + 1)); }
+    [[ "$product" == "$EXPECTED_PRODUCT_NAME" ]] \
+        || { security_warn "unexpected machine model: $product"; errors=$((errors + 1)); }
+    [[ "$(lsblk -ndo FSTYPE "$device")" == crypto_LUKS ]] \
+        || { security_warn "$device is not detected as LUKS"; errors=$((errors + 1)); }
+
+    sbctl_output="$(security_sbctl_status)"
+    grep -qE 'Setup Mode:.*Disabled' <<<"$sbctl_output" \
+        || { security_warn "Secure Boot Setup Mode is not disabled"; errors=$((errors + 1)); }
+    grep -qE 'Secure Boot:.*Enabled' <<<"$sbctl_output" \
+        || { security_warn "Secure Boot is not enabled"; errors=$((errors + 1)); }
+    grep -qE 'Vendor Keys:.*microsoft' <<<"$sbctl_output" \
+        || { security_warn "Microsoft trust is not reported by sbctl"; errors=$((errors + 1)); }
+
+    grep -qF 'ENABLE_ENROLL_LIMINE_CONFIG=yes' /etc/default/limine \
+        || { security_warn "Limine config checksum enrollment is disabled"; errors=$((errors + 1)); }
+    grep -qF 'ENABLE_VERIFICATION=yes' /etc/limine-entry-tool.conf \
+        || { security_warn "Limine boot-file verification is disabled"; errors=$((errors + 1)); }
+    grep -qF "rd.luks.options=$uuid=tpm2-device=auto" /etc/default/limine \
+        || { security_warn "Limine source lacks TPM discovery for $uuid"; errors=$((errors + 1)); }
+    if grep -qF 'tpm2-measure-pcr' /etc/default/limine; then
+        security_warn "obsolete tpm2-measure-pcr option remains in Limine source"
+        errors=$((errors + 1))
+    fi
+
+    hooks_line="$(grep -E '^[[:space:]]*HOOKS=' /etc/mkinitcpio.conf | tail -n1)"
+    for required_hook in base systemd block keyboard sd-vconsole sd-encrypt filesystems; do
+        grep -qE "(^|[=([:space:]])${required_hook}([)[:space:]]|$)" <<<"$hooks_line" \
+            || { security_warn "mkinitcpio HOOKS lacks $required_hook"; errors=$((errors + 1)); }
+    done
+    grep -qE 'HOOKS\+=\(sd-btrfs-overlayfs\)' \
+        /etc/mkinitcpio.conf.d/10-limine-snapper-sync.conf 2>/dev/null \
+        || { security_warn "Limine snapshot overlay hook is not configured"; errors=$((errors + 1)); }
+    grep -qF 'MODULES+=(nvidia nvidia_modeset nvidia_uvm nvidia_drm)' \
+        /etc/mkinitcpio.conf.d/10-chwd.conf 2>/dev/null \
+        || { security_warn "expected NVIDIA chwd modules are not configured"; errors=$((errors + 1)); }
+
+    [[ -L /etc/boot/hooks/pre.d/10-limine-reset-enroll ]] \
+        || { security_warn "Limine pre-update enrollment hook is missing"; errors=$((errors + 1)); }
+    [[ -L /etc/boot/hooks/post.d/90-limine-enroll-config ]] \
+        || { security_warn "Limine post-update enrollment hook is missing"; errors=$((errors + 1)); }
+
+    [[ -e /dev/tpmrm0 ]] \
+        || { security_warn "TPM resource-manager device is missing"; errors=$((errors + 1)); }
+
+    if [[ -r "$ESP_PATH/limine.conf" ]]; then
+        grep -qF "rd.luks.options=$uuid=tpm2-device=auto" "$ESP_PATH/limine.conf" \
+            || { security_warn "generated Limine config lacks TPM discovery"; errors=$((errors + 1)); }
+        if grep -qF 'tpm2-measure-pcr' "$ESP_PATH/limine.conf"; then
+            security_warn "generated Limine config contains tpm2-measure-pcr"
+            errors=$((errors + 1))
+        fi
+    else
+        security_warn "cannot inspect $ESP_PATH/limine.conf without root"
+    fi
+
+    if ((EUID == 0)); then
+        security_has_tpm_token "$device" \
+            || { security_warn "no systemd-tpm2 LUKS token found"; errors=$((errors + 1)); }
+        security_has_expected_tpm_policy "$device" \
+            || { security_warn "no TPM token is bound only to PCR $TPM2_PCRS"; errors=$((errors + 1)); }
+        if (( $(security_keyslot_count "$device") < 2 )); then
+            security_warn "fewer than two LUKS keyslots are active"
+            errors=$((errors + 1))
+        fi
+    else
+        security_warn "run with sudo to validate TPM token and recovery-keyslot count"
+    fi
+
+    ((errors == 0)) || security_die "machine doctor found $errors issue(s)"
+    security_say "Machine security checks passed."
+}
+
+security_backup_is_external() {
+    local backup_path=$1 backup_parent backup_source root_source
+    local backup_disk root_disk resolved_backup_parent resolved_backup_path
+    backup_parent="$(dirname -- "$backup_path")"
+    [[ -d "$backup_parent" ]] || security_die "backup directory does not exist: $backup_parent"
+    resolved_backup_parent="$(realpath -e -- "$backup_parent")"
+    resolved_backup_path="$resolved_backup_parent/$(basename -- "$backup_path")"
+    backup_source="$(findmnt -nro SOURCE -T "$resolved_backup_parent")"
+    root_source="$(findmnt -nro SOURCE -T /)"
+    backup_source="${backup_source%%\[*}"
+    root_source="${root_source%%\[*}"
+    [[ "$backup_source" != "$root_source" ]] \
+        || security_die "LUKS header backup must be on separate protected storage"
+    [[ "$backup_source" == /dev/* ]] \
+        || security_die "backup destination is not mounted from a block device"
+    backup_disk="$(lsblk -srpno NAME "$backup_source" | tail -n1)"
+    root_disk="$(lsblk -srpno NAME "$(security_luks_device)" | tail -n1)"
+    [[ -n "$backup_disk" && "$backup_disk" != "$root_disk" ]] \
+        || security_die "LUKS header backup must be on a different physical disk"
+    lsblk -srno TYPE "$backup_source" | grep -qx crypt \
+        || security_die "LUKS header backup destination is not an encrypted block mapping"
+    [[ "$resolved_backup_path" != "$SECURITY_REPOSITORY"/* ]] \
+        || security_die "refusing to write a LUKS header into the repository"
+}
+
+security_apply() {
+    local enroll_tpm=0 header_backup='' answer
+    local device uuid timestamp temporary hooks_replacement sbctl_output
+    local config_file private_key
+
+    while (($# > 0)); do
+        case "$1" in
+            --enroll-tpm) enroll_tpm=1; shift ;;
+            --header-backup)
+                (($# >= 2)) || security_die "--header-backup requires a path"
+                header_backup=$2
+                shift 2
+                ;;
+            *) security_die "unknown apply option: $1" ;;
+        esac
+    done
+
+    ((EUID == 0)) || security_die "apply must run through sudo"
+    security_assert_machine
+    for command_name in awk cryptsetup findmnt install jq limine-enroll-config \
+        limine-update ln lsblk pacman realpath sbctl sed systemd-cryptenroll; do
+        security_need "$command_name"
+    done
+
+    device="$(security_luks_device)"
+    uuid="$(security_luks_uuid "$device")"
+    [[ "$(lsblk -ndo FSTYPE "$device")" == crypto_LUKS ]] \
+        || security_die "$device is not a LUKS device"
+
+    for private_key in \
+        /var/lib/sbctl/keys/PK/PK.key \
+        /var/lib/sbctl/keys/KEK/KEK.key \
+        /var/lib/sbctl/keys/db/db.key; do
+        [[ -f "$private_key" ]] \
+            || security_die "restore the encrypted sbctl key backup first: $private_key"
+    done
+
+    sbctl_output="$(security_sbctl_status)"
+    grep -qE 'Setup Mode:.*Disabled' <<<"$sbctl_output" \
+        || security_die "refusing apply while firmware is in Secure Boot Setup Mode"
+
+    printf 'Apply public boot configuration to %s (%s)?\n' "$device" "$uuid"
+    printf 'Type APPLY to continue: '
+    read -r answer
+    [[ "$answer" == APPLY ]] || security_die "cancelled"
+
+    pacman -S --needed sbctl limine limine-mkinitcpio-hook \
+        limine-snapper-sync mkinitcpio cryptsetup jq
+
+    timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    install -Dm0644 /etc/default/limine \
+        "/etc/default/limine.dotfiles-backup-$timestamp"
+    install -Dm0644 /etc/mkinitcpio.conf \
+        "/etc/mkinitcpio.conf.dotfiles-backup-$timestamp"
+    for config_file in 10-chwd.conf 10-limine-snapper-sync.conf; do
+        if [[ -f "/etc/mkinitcpio.conf.d/$config_file" ]]; then
+            install -Dm0644 "/etc/mkinitcpio.conf.d/$config_file" \
+                "/etc/mkinitcpio.conf.d/$config_file.dotfiles-backup-$timestamp"
+        fi
+    done
+
+    temporary="$(mktemp /etc/default/limine.dotfiles.XXXXXX)"
+    sed "s/@LUKS_UUID@/$uuid/g" "$SECURITY_LIMINE_TEMPLATE" >"$temporary"
+    install -m0644 "$temporary" /etc/default/limine
+    unlink -- "$temporary"
+
+    hooks_replacement="HOOKS=($MKINITCPIO_HOOKS)"
+    temporary="$(mktemp /etc/mkinitcpio.conf.dotfiles.XXXXXX)"
+    awk -v replacement="$hooks_replacement" '
+        BEGIN { replaced = 0 }
+        /^[[:space:]]*HOOKS=/ && replaced == 0 {
+            print replacement
+            replaced = 1
+            next
+        }
+        { print }
+        END { if (replaced == 0) exit 2 }
+    ' /etc/mkinitcpio.conf >"$temporary" \
+        || security_die "could not update mkinitcpio HOOKS"
+    install -m0644 "$temporary" /etc/mkinitcpio.conf
+    unlink -- "$temporary"
+
+    install -d -m0755 /etc/mkinitcpio.conf.d \
+        /etc/boot/hooks/pre.d /etc/boot/hooks/post.d
+    install -m0644 "$SECURITY_MKINITCPIO_DROPIN_DIRECTORY/10-chwd.conf" \
+        /etc/mkinitcpio.conf.d/10-chwd.conf
+    install -m0644 \
+        "$SECURITY_MKINITCPIO_DROPIN_DIRECTORY/10-limine-snapper-sync.conf" \
+        /etc/mkinitcpio.conf.d/10-limine-snapper-sync.conf
+    ln -sfn /usr/bin/limine-reset-enroll \
+        /etc/boot/hooks/pre.d/10-limine-reset-enroll
+    ln -sfn /usr/bin/limine-enroll-config \
+        /etc/boot/hooks/post.d/90-limine-enroll-config
+
+    limine-enroll-config
+    limine-update
+
+    if ((enroll_tpm == 1)); then
+        [[ -n "$header_backup" ]] \
+            || security_die "--enroll-tpm requires --header-backup PATH"
+        grep -qE 'Secure Boot:.*Enabled' <<<"$(security_sbctl_status)" \
+            || security_die "enable Secure Boot before enrolling a PCR-7 token"
+
+        if security_has_tpm_token "$device"; then
+            security_warn "a systemd-tpm2 token already exists; enrollment skipped"
+        else
+            security_backup_is_external "$header_backup"
+            [[ ! -e "$header_backup" ]] \
+                || security_die "refusing to overwrite existing header backup: $header_backup"
+            cryptsetup luksHeaderBackup "$device" --header-backup-file "$header_backup"
+            chmod 0600 "$header_backup"
+            printf 'Header backup created at %s. Type ENROLL to add TPM PCR %s: ' \
+                "$header_backup" "$TPM2_PCRS"
+            read -r answer
+            [[ "$answer" == ENROLL ]] || security_die "TPM enrollment cancelled"
+            systemd-cryptenroll --tpm2-device=auto \
+                --tpm2-pcrs="$TPM2_PCRS" "$device"
+        fi
+    fi
+
+    security_doctor
+}
+
+main() {
+    local command=${1:-status}
+    (($# == 0)) || shift
+
+    case "$command" in
+        status) (($# == 0)) || security_die "status accepts no arguments"; security_status ;;
+        plan) (($# == 0)) || security_die "plan accepts no arguments"; security_plan ;;
+        doctor) (($# == 0)) || security_die "doctor accepts no arguments"; security_doctor ;;
+        apply) security_apply "$@" ;;
+        help|-h|--help) security_usage ;;
+        *) security_usage >&2; security_die "unknown command: $command" ;;
+    esac
+}
+
+main "$@"

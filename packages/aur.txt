@@ -1,3 +1,5 @@
 1password
 spotify
 visual-studio-code-bin
+webstorm
+webstorm-jre

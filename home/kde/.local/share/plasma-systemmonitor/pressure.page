@@ -1,0 +1,295 @@
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor page for nukebyte
+
+[Face-59000000000001][Appearance]
+Title=CPU Pressure History
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000001][SensorColors]
+pressure/cpu/some10Sec=246,166,35
+pressure/cpu/some60Sec=246,116,0
+pressure/cpu/some300Sec=120,120,140
+pressure/cpu/full10Sec=237,90,70
+pressure/cpu/full60Sec=237,90,70
+pressure/cpu/full300Sec=179,136,255
+
+[Face-59000000000001][SensorLabels]
+pressure/cpu/some10Sec=Some · 10 sec
+pressure/cpu/some60Sec=Some · 1 min
+pressure/cpu/some300Sec=Some · 5 min
+pressure/cpu/full10Sec=Full · 10 sec
+pressure/cpu/full60Sec=Full · 1 min
+pressure/cpu/full300Sec=Full · 5 min
+
+[Face-59000000000001][Sensors]
+highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/cpu/some60Sec","pressure/cpu/some300Sec","pressure/cpu/full10Sec","pressure/cpu/full60Sec","pressure/cpu/full300Sec"]
+
+[Face-59000000000001][org.kde.ksysguard.linechart][General]
+historyAmount=300
+lineChartFillOpacity=6
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=false
+rangeFromY=0
+rangeToY=100
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-59000000000002][Appearance]
+Title=Memory Pressure History
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000002][SensorColors]
+pressure/memory/some10Sec=246,166,35
+pressure/memory/some60Sec=246,116,0
+pressure/memory/some300Sec=120,120,140
+pressure/memory/full10Sec=237,90,70
+pressure/memory/full60Sec=237,90,70
+pressure/memory/full300Sec=179,136,255
+
+[Face-59000000000002][SensorLabels]
+pressure/memory/some10Sec=Some · 10 sec
+pressure/memory/some60Sec=Some · 1 min
+pressure/memory/some300Sec=Some · 5 min
+pressure/memory/full10Sec=Full · 10 sec
+pressure/memory/full60Sec=Full · 1 min
+pressure/memory/full300Sec=Full · 5 min
+
+[Face-59000000000002][Sensors]
+highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec"]
+
+[Face-59000000000002][org.kde.ksysguard.linechart][General]
+historyAmount=300
+lineChartFillOpacity=6
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=false
+rangeFromY=0
+rangeToY=100
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-59000000000003][Appearance]
+Title=I/O Pressure History
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000003][SensorColors]
+pressure/io/some10Sec=246,166,35
+pressure/io/some60Sec=246,116,0
+pressure/io/some300Sec=120,120,140
+pressure/io/full10Sec=237,90,70
+pressure/io/full60Sec=237,90,70
+pressure/io/full300Sec=179,136,255
+
+[Face-59000000000003][SensorLabels]
+pressure/io/some10Sec=Some · 10 sec
+pressure/io/some60Sec=Some · 1 min
+pressure/io/some300Sec=Some · 5 min
+pressure/io/full10Sec=Full · 10 sec
+pressure/io/full60Sec=Full · 1 min
+pressure/io/full300Sec=Full · 5 min
+
+[Face-59000000000003][Sensors]
+highPrioritySensorIds=["pressure/io/some10Sec","pressure/io/some60Sec","pressure/io/some300Sec","pressure/io/full10Sec","pressure/io/full60Sec","pressure/io/full300Sec"]
+
+[Face-59000000000003][org.kde.ksysguard.linechart][General]
+historyAmount=300
+lineChartFillOpacity=6
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=false
+rangeFromY=0
+rangeToY=100
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-59000000000004][Appearance]
+Title=CPU PSI · Complete
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000004][SensorColors]
+pressure/cpu/some10Sec=246,166,35
+pressure/cpu/some60Sec=246,116,0
+pressure/cpu/some300Sec=120,120,140
+pressure/cpu/full10Sec=237,90,70
+pressure/cpu/full60Sec=237,90,70
+pressure/cpu/full300Sec=179,136,255
+pressure/cpu/someTotal=120,120,140
+pressure/cpu/fullTotal=120,120,140
+
+[Face-59000000000004][SensorLabels]
+pressure/cpu/some10Sec=Some · 10 sec
+pressure/cpu/some60Sec=Some · 1 min
+pressure/cpu/some300Sec=Some · 5 min
+pressure/cpu/full10Sec=Full · 10 sec
+pressure/cpu/full60Sec=Full · 1 min
+pressure/cpu/full300Sec=Full · 5 min
+pressure/cpu/someTotal=Some stall time · total
+pressure/cpu/fullTotal=Full stall time · total
+
+[Face-59000000000004][Sensors]
+highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/cpu/some60Sec","pressure/cpu/some300Sec","pressure/cpu/full10Sec","pressure/cpu/full60Sec","pressure/cpu/full300Sec","pressure/cpu/someTotal","pressure/cpu/fullTotal"]
+
+[Face-59000000000004][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-59000000000005][Appearance]
+Title=Memory PSI · Complete
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000005][SensorColors]
+pressure/memory/some10Sec=246,166,35
+pressure/memory/some60Sec=246,116,0
+pressure/memory/some300Sec=120,120,140
+pressure/memory/full10Sec=237,90,70
+pressure/memory/full60Sec=237,90,70
+pressure/memory/full300Sec=179,136,255
+pressure/memory/someTotal=120,120,140
+pressure/memory/fullTotal=120,120,140
+
+[Face-59000000000005][SensorLabels]
+pressure/memory/some10Sec=Some · 10 sec
+pressure/memory/some60Sec=Some · 1 min
+pressure/memory/some300Sec=Some · 5 min
+pressure/memory/full10Sec=Full · 10 sec
+pressure/memory/full60Sec=Full · 1 min
+pressure/memory/full300Sec=Full · 5 min
+pressure/memory/someTotal=Some stall time · total
+pressure/memory/fullTotal=Full stall time · total
+
+[Face-59000000000005][Sensors]
+highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec","pressure/memory/someTotal","pressure/memory/fullTotal"]
+
+[Face-59000000000005][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-59000000000006][Appearance]
+Title=I/O PSI · Complete
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-59000000000006][SensorColors]
+pressure/io/some10Sec=246,166,35
+pressure/io/some60Sec=246,116,0
+pressure/io/some300Sec=120,120,140
+pressure/io/full10Sec=237,90,70
+pressure/io/full60Sec=237,90,70
+pressure/io/full300Sec=179,136,255
+pressure/io/someTotal=120,120,140
+pressure/io/fullTotal=120,120,140
+
+[Face-59000000000006][SensorLabels]
+pressure/io/some10Sec=Some · 10 sec
+pressure/io/some60Sec=Some · 1 min
+pressure/io/some300Sec=Some · 5 min
+pressure/io/full10Sec=Full · 10 sec
+pressure/io/full60Sec=Full · 1 min
+pressure/io/full300Sec=Full · 5 min
+pressure/io/someTotal=Some stall time · total
+pressure/io/fullTotal=Full stall time · total
+
+[Face-59000000000006][Sensors]
+highPrioritySensorIds=["pressure/io/some10Sec","pressure/io/some60Sec","pressure/io/some300Sec","pressure/io/full10Sec","pressure/io/full60Sec","pressure/io/full300Sec","pressure/io/someTotal","pressure/io/fullTotal"]
+
+[Face-59000000000006][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[page]
+Title=Kernel Pressure · PSI
+actionsFace=
+icon=speedometer
+loadType=ondemand
+margin=1
+version=1
+
+[page][row-0]
+Title=
+heightMode=half
+isTitle=false
+name=row-0
+
+[page][row-0][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-0][column-0][section-0]
+face=Face-59000000000001
+isSeparator=false
+name=section-0
+
+[page][row-0][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-0][column-1][section-0]
+face=Face-59000000000002
+isSeparator=false
+name=section-0
+
+[page][row-1]
+Title=
+heightMode=half
+isTitle=false
+name=row-1
+
+[page][row-1][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-1][column-0][section-0]
+face=Face-59000000000003
+isSeparator=false
+name=section-0
+
+[page][row-2]
+Title=
+heightMode=minimum
+isTitle=false
+name=row-2
+
+[page][row-2][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-2][column-0][section-0]
+face=Face-59000000000004
+isSeparator=false
+name=section-0
+
+[page][row-2][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-2][column-1][section-0]
+face=Face-59000000000005
+isSeparator=false
+name=section-0
+
+[page][row-2][column-2]
+name=column-2
+noMargins=false
+showBackground=true
+
+[page][row-2][column-2][section-0]
+face=Face-59000000000006
+isSeparator=false
+name=section-0

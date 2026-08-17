@@ -239,8 +239,8 @@
               "y": 1.0
             },
             "scale_rel": {
-              "x": 1.0,
-              "y": 1.0
+              "x": 0.75,
+              "y": 0.75
             },
             "bounds": {
               "x": 0.0,
@@ -324,7 +324,7 @@
   "saved_projectors": [],
   "preview_locked": false,
   "scaling_enabled": false,
-  "scaling_level": -2,
+  "scaling_level": -32,
   "scaling_off_x": 0.0,
   "scaling_off_y": 0.0,
   "virtual-camera": {
@@ -345,8 +345,8 @@
     }
   },
   "resolution": {
-    "x": 1920,
-    "y": 1080
+    "x": 2560,
+    "y": 1440
   },
   "version": 2
 }

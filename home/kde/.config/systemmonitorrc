@@ -1,2 +1,7 @@
 [General]
+hiddenPages=applications.page,history.page,old-history.page,old-overview.page,processes.page
 lastVisitedPage=overview.page
+pageOrder=overview.page,cpu.page,memory.page,gpu0-rtx3050.page,gpu1-radeon.page,thermals.page,filesystems.page,disk-io.page,network.page,pressure.page,processes-admin.page,system.page
+sidebarCollapsed=false
+sidebarWidth=240
+startPage=overview.page

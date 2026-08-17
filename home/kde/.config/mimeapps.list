@@ -11,6 +11,7 @@ application/x-extension-xhtml=zen.desktop
 application/x-extension-xht=zen.desktop
 x-scheme-handler/t3code=t3code-url-handler.desktop
 x-scheme-handler/codex=chatgpt.desktop
+x-scheme-handler/jetbrains=jetbrainsd.desktop
 
 [Added Associations]
 x-scheme-handler/http=zen.desktop;userapp-Zen-3DMLU3.desktop;

@@ -1,182 +1,434 @@
-[Face-101427258480848][Appearance]
-Title=Networks
-chartFace=org.kde.ksysguard.textonly
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor command center for nukebyte
 
-[Face-101427258480848][SensorColors]
-network/enp2s0/download=61,174,233
-network/enp2s0/ipv4address=233,120,61
-network/enp2s0/ipv6address=88,233,61
-network/enp2s0/upload=206,61,233
+[Face-50000000000001][Appearance]
+Title=CPU Activity · Total, User, System and I/O Wait
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
 
-[Face-101427258480848][Sensors]
-highPrioritySensorIds=["network/(?!all).*/download","network/(?!all).*/upload","network/(?!all).*/ipv4address","network/(?!all).*/ipv6address"]
-totalSensors=["network/(?!all).*/network"]
-
-[Face-101427258480848][org.kde.ksysguard.textonly][General]
-groupByTotal=true
-
-[Face-106123380916688][Appearance]
-Title=CPU
-chartFace=org.kde.ksysguard.piechart
-
-[Face-106123380916688][SensorColors]
+[Face-50000000000001][SensorColors]
 cpu/all/usage=61,174,233
+cpu/all/user=0,200,160
+cpu/all/system=179,136,255
+cpu/all/wait=246,166,35
 
-[Face-106123380916688][Sensors]
-highPrioritySensorIds=["cpu/all/usage"]
-totalSensors=["cpu/all/usage"]
+[Face-50000000000001][SensorLabels]
+cpu/all/usage=Total
+cpu/all/user=User
+cpu/all/system=System
+cpu/all/wait=I/O wait
 
-[Face-106123380916688][org.kde.ksysguard.piechart][General]
-showLegend=false
+[Face-50000000000001][Sensors]
+highPrioritySensorIds=["cpu/all/usage","cpu/all/user","cpu/all/system","cpu/all/wait"]
 
-[Face-106123406501568][Appearance]
-Title=GPU
-chartFace=org.kde.ksysguard.piechart
+[Face-50000000000001][org.kde.ksysguard.linechart][General]
+historyAmount=180
+lineChartFillOpacity=10
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=false
+rangeFromY=0
+rangeToY=100
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
 
-[Face-106123406501568][SensorColors]
-gpu/all/usage=61,174,233
+[Face-50000000000002][Appearance]
+Title=Memory · Applications, Cache and zram
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
 
-[Face-106123406501568][Sensors]
-highPrioritySensorIds=["gpu/all/usage"]
-totalSensors=["gpu/all/usage"]
+[Face-50000000000002][SensorColors]
+memory/physical/application=61,174,233
+memory/physical/cache=0,200,160
+memory/physical/buffer=0,188,174
+memory/swap/used=179,136,255
 
-[Face-106123406501568][org.kde.ksysguard.piechart][General]
-showLegend=false
+[Face-50000000000002][SensorLabels]
+memory/physical/application=Applications
+memory/physical/cache=Cache
+memory/physical/buffer=Buffers
+memory/swap/used=zram used
 
-[Face-106123413726736][Appearance]
-Title=Memory
-chartFace=org.kde.ksysguard.piechart
+[Face-50000000000002][Sensors]
+highPrioritySensorIds=["memory/physical/application","memory/physical/cache","memory/physical/buffer","memory/swap/used"]
 
-[Face-106123413726736][SensorColors]
-memory/physical/used=61,174,233
+[Face-50000000000002][org.kde.ksysguard.linechart][General]
+historyAmount=180
+lineChartFillOpacity=10
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
 
-[Face-106123413726736][Sensors]
-highPrioritySensorIds=["memory/physical/used"]
-totalSensors=["memory/physical/used","memory/physical/total"]
-
-[Face-106123413726736][org.kde.ksysguard.piechart][General]
-showLegend=false
-
-[Face-106123488899456][Appearance]
-Title=Disks
+[Face-50000000000003][Appearance]
+Title=GPU 0 · RTX 3050
 chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
 
-[Face-106123488899456][SensorColors]
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=233,120,61
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/used=61,174,233
+[Face-50000000000003][SensorColors]
+gpu/gpu0/usage=118,185,0
+gpu/gpu0/temperature=237,90,70
+gpu/gpu0/power=246,166,35
+gpu/gpu0/usedVram=0,188,174
 
-[Face-106123488899456][Sensors]
-highPrioritySensorIds=["disk/(?!all).*/used"]
+[Face-50000000000003][SensorLabels]
+gpu/gpu0/usage=Utilization
+gpu/gpu0/temperature=Temperature
+gpu/gpu0/power=Board power
+gpu/gpu0/usedVram=VRAM used
 
-[Face-108592549200736][Appearance]
-Title=Applications
-chartFace=org.kde.ksysguard.applicationstable
+[Face-50000000000003][Sensors]
+highPrioritySensorIds=["gpu/gpu0/usage","gpu/gpu0/temperature","gpu/gpu0/power","gpu/gpu0/usedVram"]
+
+[Face-50000000000003][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000004][Appearance]
+Title=GPU 1 · Radeon Vega
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-50000000000004][SensorColors]
+gpu/gpu1/usage=237,90,70
+gpu/gpu1/temperature=237,90,70
+gpu/gpu1/power1=246,166,35
+gpu/gpu1/usedVram=0,188,174
+
+[Face-50000000000004][SensorLabels]
+gpu/gpu1/usage=Utilization
+gpu/gpu1/temperature=Temperature
+gpu/gpu1/power1=PPT package power
+gpu/gpu1/usedVram=Shared memory used
+
+[Face-50000000000004][Sensors]
+highPrioritySensorIds=["gpu/gpu1/usage","gpu/gpu1/temperature","gpu/gpu1/power1","gpu/gpu1/usedVram"]
+
+[Face-50000000000004][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000005][Appearance]
+Title=Thermal Hotspots and Cooling
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-50000000000005][SensorColors]
+cpu/all/maximumTemperature=246,116,0
+gpu/gpu0/temperature=118,185,0
+gpu/gpu1/temperature=237,90,70
+lmsensors/nvme-pci-0400/temp1=179,136,255
+lmsensors/mt7921_phy0-pci-0300/temp1=0,188,174
+
+[Face-50000000000005][SensorLabels]
+cpu/all/maximumTemperature=CPU maximum
+gpu/gpu0/temperature=RTX 3050
+gpu/gpu1/temperature=Radeon Vega
+lmsensors/nvme-pci-0400/temp1=NVMe composite
+lmsensors/mt7921_phy0-pci-0300/temp1=Wi-Fi
+
+[Face-50000000000005][Sensors]
+highPrioritySensorIds=["cpu/all/maximumTemperature","gpu/gpu0/temperature","gpu/gpu1/temperature","lmsensors/nvme-pci-0400/temp1","lmsensors/mt7921_phy0-pci-0300/temp1"]
+
+[Face-50000000000005][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000006][Appearance]
+Title=NVMe I/O · Physical Device
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-50000000000006][SensorColors]
+disk/nvme0n1/read=0,188,174
+disk/nvme0n1/write=179,136,255
+
+[Face-50000000000006][SensorLabels]
+disk/nvme0n1/read=Read
+disk/nvme0n1/write=Write
+
+[Face-50000000000006][Sensors]
+highPrioritySensorIds=["disk/nvme0n1/read","disk/nvme0n1/write"]
+
+[Face-50000000000006][org.kde.ksysguard.linechart][General]
+historyAmount=180
+lineChartFillOpacity=16
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-50000000000007][Appearance]
+Title=Network Throughput · enp2s0
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-50000000000007][SensorColors]
+network/enp2s0/download=0,200,160
+network/enp2s0/upload=246,166,35
+
+[Face-50000000000007][SensorLabels]
+network/enp2s0/download=Download
+network/enp2s0/upload=Upload
+
+[Face-50000000000007][Sensors]
+highPrioritySensorIds=["network/enp2s0/download","network/enp2s0/upload"]
+
+[Face-50000000000007][org.kde.ksysguard.linechart][General]
+historyAmount=180
+lineChartFillOpacity=16
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-50000000000008][Appearance]
+Title=Root Filesystem · Btrfs on LUKS
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=2000
+
+[Face-50000000000008][SensorColors]
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=179,136,255
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=179,136,255
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=0,200,160
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=120,120,140
+
+[Face-50000000000008][SensorLabels]
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=Used
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=Used percentage
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=Free
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=Capacity
+
+[Face-50000000000008][Sensors]
+highPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total"]
+
+[Face-50000000000008][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000009][Appearance]
+Title=Kernel Pressure · 10 Second Window
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-50000000000009][SensorColors]
+pressure/cpu/some10Sec=246,166,35
+pressure/memory/some10Sec=179,136,255
+pressure/memory/full10Sec=237,90,70
+pressure/io/some10Sec=246,116,0
+pressure/io/full10Sec=237,90,70
+
+[Face-50000000000009][SensorLabels]
+pressure/cpu/some10Sec=CPU · some stalled
+pressure/memory/some10Sec=Memory · some stalled
+pressure/memory/full10Sec=Memory · fully stalled
+pressure/io/some10Sec=I/O · some stalled
+pressure/io/full10Sec=I/O · fully stalled
+
+[Face-50000000000009][Sensors]
+highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/memory/some10Sec","pressure/memory/full10Sec","pressure/io/some10Sec","pressure/io/full10Sec"]
+
+[Face-50000000000009][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000010][Appearance]
+Title=Cooling, Power and Load
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=2000
+
+[Face-50000000000010][SensorColors]
+lmsensors/asus-isa-000a/fan1=61,174,233
+lmsensors/asus-isa-000a/fan2=179,136,255
+gpu/gpu0/power=118,185,0
+gpu/gpu1/power1=237,90,70
+cpu/loadaverages/loadaverage1=246,166,35
+
+[Face-50000000000010][SensorLabels]
+lmsensors/asus-isa-000a/fan1=CPU fan
+lmsensors/asus-isa-000a/fan2=GPU fan
+gpu/gpu0/power=RTX board power
+gpu/gpu1/power1=Radeon package power
+cpu/loadaverages/loadaverage1=Load average · 1 min
+
+[Face-50000000000010][Sensors]
+highPrioritySensorIds=["lmsensors/asus-isa-000a/fan1","lmsensors/asus-isa-000a/fan2","gpu/gpu0/power","gpu/gpu1/power1","cpu/loadaverages/loadaverage1"]
+
+[Face-50000000000010][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-50000000000011][Appearance]
+Title=Processes · Operational Triage
+chartFace=org.kde.ksysguard.processtable
 showTitle=true
 
-[Face-108592549200736][org.kde.ksysguard.applicationstable][General]
-showToolBar=true
-
-[Face-99554503711904][Appearance]
-Title=Swap
-chartFace=org.kde.ksysguard.piechart
-
-[Face-99554503711904][SensorColors]
-memory/swap/used=61,174,233
-
-[Face-99554503711904][Sensors]
-highPrioritySensorIds=["memory/swap/used"]
-totalSensors=["memory/swap/used","memory/swap/total"]
-
-[Face-99554503711904][org.kde.ksysguard.piechart][General]
-showLegend=false
+[Face-50000000000011][org.kde.ksysguard.processtable][General]
+askWhenKilling=true
+columnWidths=0.25,0.11,0.11,0.10,0.10,0.11,0.11,0.11
+showDetails=false
+showToolBar=false
+sortColumn=usage
+sortDirection=1
+sortedColumns=name,usage,memory,sharedMemory,netInbound,netOutbound,ioCharactersActuallyReadRate,ioCharactersActuallyWrittenRate
+userFilterMode=3
+viewMode=0
 
 [page]
-Title=Overview
+Title=System Command Center
 actionsFace=
-icon=speedometer
-loadType=
-margin=2
+icon=utilities-system-monitor
+loadType=onstart
+margin=1
 version=1
 
 [page][row-0]
-heightMode=balanced
+Title=
+heightMode=half
 isTitle=false
 name=row-0
 
 [page][row-0][column-0]
 name=column-0
-noMargins=
+noMargins=false
 showBackground=true
 
 [page][row-0][column-0][section-0]
-face=Face-106123380916688
+face=Face-50000000000001
 isSeparator=false
 name=section-0
-
-[page][row-0][column-0][section-1]
-isSeparator=true
-name=section-1
-
-[page][row-0][column-0][section-2]
-face=Face-106123406501568
-isSeparator=false
-name=section-2
 
 [page][row-0][column-1]
 name=column-1
-noMargins=
+noMargins=false
 showBackground=true
 
 [page][row-0][column-1][section-0]
-face=Face-106123413726736
+face=Face-50000000000002
 isSeparator=false
 name=section-0
 
-[page][row-0][column-1][section-1]
-isSeparator=true
-name=section-1
-
-[page][row-0][column-1][section-2]
-face=Face-99554503711904
-isSeparator=false
-name=section-2
-
 [page][row-1]
-heightMode=balanced
+Title=
+heightMode=minimum
 isTitle=false
 name=row-1
 
 [page][row-1][column-0]
 name=column-0
-noMargins=
+noMargins=false
 showBackground=true
 
 [page][row-1][column-0][section-0]
-face=Face-106123488899456
+face=Face-50000000000003
 isSeparator=false
 name=section-0
 
 [page][row-1][column-1]
 name=column-1
-noMargins=
+noMargins=false
 showBackground=true
 
 [page][row-1][column-1][section-0]
-face=Face-101427258480848
+face=Face-50000000000004
+isSeparator=false
+name=section-0
+
+[page][row-1][column-2]
+name=column-2
+noMargins=false
+showBackground=true
+
+[page][row-1][column-2][section-0]
+face=Face-50000000000005
 isSeparator=false
 name=section-0
 
 [page][row-2]
+Title=
 heightMode=half
 isTitle=false
 name=row-2
 
 [page][row-2][column-0]
 name=column-0
-noMargins=true
+noMargins=false
 showBackground=true
 
 [page][row-2][column-0][section-0]
-face=Face-108592549200736
+face=Face-50000000000006
+isSeparator=false
+name=section-0
+
+[page][row-2][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-2][column-1][section-0]
+face=Face-50000000000007
+isSeparator=false
+name=section-0
+
+[page][row-3]
+Title=
+heightMode=minimum
+isTitle=false
+name=row-3
+
+[page][row-3][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-3][column-0][section-0]
+face=Face-50000000000008
+isSeparator=false
+name=section-0
+
+[page][row-3][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-3][column-1][section-0]
+face=Face-50000000000009
+isSeparator=false
+name=section-0
+
+[page][row-3][column-2]
+name=column-2
+noMargins=false
+showBackground=true
+
+[page][row-3][column-2][section-0]
+face=Face-50000000000010
+isSeparator=false
+name=section-0
+
+[page][row-4]
+Title=
+heightMode=half
+isTitle=false
+name=row-4
+
+[page][row-4][column-0]
+name=column-0
+noMargins=true
+showBackground=true
+
+[page][row-4][column-0][section-0]
+face=Face-50000000000011
 isSeparator=false
 name=section-0

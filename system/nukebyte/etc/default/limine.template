@@ -1,0 +1,4 @@
+ESP_PATH="/boot"
+KERNEL_CMDLINE[default]+="quiet nowatchdog splash rw rootflags=subvol=/@ rd.luks.uuid=@LUKS_UUID@ rd.luks.options=@LUKS_UUID@=tpm2-device=auto root=/dev/mapper/luks-@LUKS_UUID@"
+BOOT_ORDER="*, *lts, *fallback, Snapshots"
+ENABLE_ENROLL_LIMINE_CONFIG=yes

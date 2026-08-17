@@ -1,1 +1,1 @@
-{"rate_control":"CQP","cqp":16,"keyint_sec":2,"preset":"p7","lookahead":true,"bframe_ref_mode":1,"multipass":"fullres","bf":4}
+{"rate_control":"CQP","cqp":16,"keyint_sec":2,"preset":"p5","lookahead":false,"bframe_ref_mode":1,"multipass":"qres","bf":2}

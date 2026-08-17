@@ -1,0 +1,246 @@
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor page for nukebyte
+
+[Face-58000000000001][Appearance]
+Title=Wired Throughput · enp2s0
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000001][SensorColors]
+network/enp2s0/download=0,200,160
+network/enp2s0/upload=246,166,35
+
+[Face-58000000000001][SensorLabels]
+network/enp2s0/download=Download
+network/enp2s0/upload=Upload
+
+[Face-58000000000001][Sensors]
+highPrioritySensorIds=["network/enp2s0/download","network/enp2s0/upload"]
+
+[Face-58000000000001][org.kde.ksysguard.linechart][General]
+historyAmount=300
+lineChartFillOpacity=16
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-58000000000002][Appearance]
+Title=Aggregate Throughput · All Interfaces
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000002][SensorColors]
+network/all/download=0,188,174
+network/all/upload=179,136,255
+
+[Face-58000000000002][SensorLabels]
+network/all/download=Download
+network/all/upload=Upload
+
+[Face-58000000000002][Sensors]
+highPrioritySensorIds=["network/all/download","network/all/upload"]
+
+[Face-58000000000002][org.kde.ksysguard.linechart][General]
+historyAmount=300
+lineChartFillOpacity=12
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-58000000000003][Appearance]
+Title=Transfer Totals
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000003][SensorColors]
+network/enp2s0/totalDownload=0,200,160
+network/enp2s0/totalUpload=246,166,35
+network/all/totalDownload=0,188,174
+network/all/totalUpload=179,136,255
+
+[Face-58000000000003][SensorLabels]
+network/enp2s0/totalDownload=enp2s0 downloaded
+network/enp2s0/totalUpload=enp2s0 uploaded
+network/all/totalDownload=All interfaces downloaded
+network/all/totalUpload=All interfaces uploaded
+
+[Face-58000000000003][Sensors]
+highPrioritySensorIds=["network/enp2s0/totalDownload","network/enp2s0/totalUpload","network/all/totalDownload","network/all/totalUpload"]
+
+[Face-58000000000003][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-58000000000004][Appearance]
+Title=Alternate Rate Units · Bits per Second
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000004][SensorColors]
+network/enp2s0/downloadBits=0,200,160
+network/enp2s0/uploadBits=246,166,35
+network/all/downloadBits=0,188,174
+network/all/uploadBits=179,136,255
+
+[Face-58000000000004][SensorLabels]
+network/enp2s0/downloadBits=enp2s0 download
+network/enp2s0/uploadBits=enp2s0 upload
+network/all/downloadBits=All interfaces download
+network/all/uploadBits=All interfaces upload
+
+[Face-58000000000004][Sensors]
+highPrioritySensorIds=["network/enp2s0/downloadBits","network/enp2s0/uploadBits","network/all/downloadBits","network/all/uploadBits"]
+
+[Face-58000000000004][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-58000000000005][Appearance]
+Title=IPv4 and Link Context
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000005][SensorColors]
+network/enp2s0/network=120,120,140
+network/enp2s0/signal=0,200,160
+network/enp2s0/ipv4address=61,174,233
+network/enp2s0/ipv4withPrefixLength=61,174,233
+network/enp2s0/ipv4subnet=0,188,174
+network/enp2s0/ipv4gateway=246,166,35
+network/enp2s0/ipv4dns=179,136,255
+
+[Face-58000000000005][SensorLabels]
+network/enp2s0/network=Connection
+network/enp2s0/signal=Signal / link status
+network/enp2s0/ipv4address=IPv4 address
+network/enp2s0/ipv4withPrefixLength=IPv4 with prefix
+network/enp2s0/ipv4subnet=IPv4 subnet
+network/enp2s0/ipv4gateway=IPv4 gateway
+network/enp2s0/ipv4dns=IPv4 DNS
+
+[Face-58000000000005][Sensors]
+highPrioritySensorIds=["network/enp2s0/network","network/enp2s0/signal","network/enp2s0/ipv4address","network/enp2s0/ipv4withPrefixLength","network/enp2s0/ipv4subnet","network/enp2s0/ipv4gateway","network/enp2s0/ipv4dns"]
+
+[Face-58000000000005][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[Face-58000000000006][Appearance]
+Title=IPv6 Context
+chartFace=org.kde.ksysguard.textonly
+showTitle=true
+updateRateLimit=750
+
+[Face-58000000000006][SensorColors]
+network/enp2s0/ipv6address=61,174,233
+network/enp2s0/ipv6withPrefixLength=61,174,233
+network/enp2s0/ipv6subnet=0,188,174
+network/enp2s0/ipv6gateway=246,166,35
+network/enp2s0/ipv6dns=179,136,255
+
+[Face-58000000000006][SensorLabels]
+network/enp2s0/ipv6address=IPv6 address
+network/enp2s0/ipv6withPrefixLength=IPv6 with prefix
+network/enp2s0/ipv6subnet=IPv6 subnet
+network/enp2s0/ipv6gateway=IPv6 gateway
+network/enp2s0/ipv6dns=IPv6 DNS
+
+[Face-58000000000006][Sensors]
+highPrioritySensorIds=["network/enp2s0/ipv6address","network/enp2s0/ipv6withPrefixLength","network/enp2s0/ipv6subnet","network/enp2s0/ipv6gateway","network/enp2s0/ipv6dns"]
+
+[Face-58000000000006][org.kde.ksysguard.textonly][General]
+groupByTotal=false
+
+[page]
+Title=Network · enp2s0
+actionsFace=
+icon=network-wired
+loadType=ondemand
+margin=1
+version=1
+
+[page][row-0]
+Title=
+heightMode=half
+isTitle=false
+name=row-0
+
+[page][row-0][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-0][column-0][section-0]
+face=Face-58000000000001
+isSeparator=false
+name=section-0
+
+[page][row-0][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-0][column-1][section-0]
+face=Face-58000000000002
+isSeparator=false
+name=section-0
+
+[page][row-1]
+Title=
+heightMode=minimum
+isTitle=false
+name=row-1
+
+[page][row-1][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-1][column-0][section-0]
+face=Face-58000000000003
+isSeparator=false
+name=section-0
+
+[page][row-1][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-1][column-1][section-0]
+face=Face-58000000000004
+isSeparator=false
+name=section-0
+
+[page][row-2]
+Title=
+heightMode=half
+isTitle=false
+name=row-2
+
+[page][row-2][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-2][column-0][section-0]
+face=Face-58000000000005
+isSeparator=false
+name=section-0
+
+[page][row-2][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-2][column-1][section-0]
+face=Face-58000000000006
+isSeparator=false
+name=section-0

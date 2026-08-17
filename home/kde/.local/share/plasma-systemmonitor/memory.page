@@ -1,0 +1,321 @@
+# SPDX-License-Identifier: GPL-2.0-only OR GPL-3.0-only OR LicenseRef-KDE-Accepted-GPL
+# Purpose: hardware-specific Plasma System Monitor page for nukebyte
+
+[Face-52000000000001][Appearance]
+Title=Physical Memory History
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000001][SensorColors]
+memory/physical/used=61,174,233
+memory/physical/application=179,136,255
+memory/physical/cache=0,200,160
+memory/physical/buffer=0,188,174
+
+[Face-52000000000001][SensorLabels]
+memory/physical/used=Used
+memory/physical/application=Applications
+memory/physical/cache=Cache
+memory/physical/buffer=Buffers
+
+[Face-52000000000001][Sensors]
+highPrioritySensorIds=["memory/physical/used","memory/physical/application","memory/physical/cache","memory/physical/buffer"]
+
+[Face-52000000000001][org.kde.ksysguard.linechart][General]
+historyAmount=240
+lineChartFillOpacity=10
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-52000000000002][Appearance]
+Title=Memory Composition · Current
+chartFace=org.kde.ksysguard.barchart
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000002][SensorColors]
+memory/physical/application=61,174,233
+memory/physical/cache=0,200,160
+memory/physical/buffer=0,188,174
+memory/physical/free=120,120,140
+
+[Face-52000000000002][SensorLabels]
+memory/physical/application=Applications
+memory/physical/cache=Cache
+memory/physical/buffer=Buffers
+memory/physical/free=Free
+
+[Face-52000000000002][Sensors]
+highPrioritySensorIds=["memory/physical/application","memory/physical/cache","memory/physical/buffer","memory/physical/free"]
+
+[Face-52000000000002][org.kde.ksysguard.barchart][General]
+barChartStacked=false
+horizontalBars=true
+rangeAuto=true
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-52000000000003][Appearance]
+Title=Physical Memory · Raw and Percentage Values
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000003][SensorColors]
+memory/physical/total=120,120,140
+memory/physical/used=61,174,233
+memory/physical/usedPercent=61,174,233
+memory/physical/free=0,200,160
+memory/physical/freePercent=0,200,160
+memory/physical/application=179,136,255
+memory/physical/applicationPercent=179,136,255
+memory/physical/cache=0,188,174
+memory/physical/cachePercent=0,188,174
+memory/physical/buffer=246,166,35
+memory/physical/bufferPercent=246,166,35
+
+[Face-52000000000003][SensorLabels]
+memory/physical/total=Total
+memory/physical/used=Used
+memory/physical/usedPercent=Used percentage
+memory/physical/free=Free
+memory/physical/freePercent=Free percentage
+memory/physical/application=Applications
+memory/physical/applicationPercent=Applications percentage
+memory/physical/cache=Cache
+memory/physical/cachePercent=Cache percentage
+memory/physical/buffer=Buffers
+memory/physical/bufferPercent=Buffers percentage
+
+[Face-52000000000003][Sensors]
+highPrioritySensorIds=["memory/physical/total","memory/physical/used","memory/physical/usedPercent","memory/physical/free","memory/physical/freePercent","memory/physical/application","memory/physical/applicationPercent","memory/physical/cache","memory/physical/cachePercent","memory/physical/buffer","memory/physical/bufferPercent"]
+
+[Face-52000000000003][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-52000000000004][Appearance]
+Title=zram Swap · Used vs Total
+chartFace=org.kde.ksysguard.piechart
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000004][SensorColors]
+memory/swap/used=179,136,255
+
+[Face-52000000000004][SensorLabels]
+memory/swap/used=Used
+memory/swap/total=Total
+
+[Face-52000000000004][Sensors]
+highPrioritySensorIds=["memory/swap/used"]
+totalSensors=["memory/swap/used","memory/swap/total"]
+
+[Face-52000000000004][org.kde.ksysguard.piechart][General]
+fromAngle=-130
+toAngle=130
+smoothEnds=true
+showLegend=true
+rangeAuto=true
+
+[Face-52000000000005][Appearance]
+Title=zram Swap · Complete Telemetry
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000005][SensorColors]
+memory/swap/total=120,120,140
+memory/swap/used=179,136,255
+memory/swap/usedPercent=179,136,255
+memory/swap/free=0,200,160
+memory/swap/freePercent=0,200,160
+
+[Face-52000000000005][SensorLabels]
+memory/swap/total=Total
+memory/swap/used=Used
+memory/swap/usedPercent=Used percentage
+memory/swap/free=Free
+memory/swap/freePercent=Free percentage
+
+[Face-52000000000005][Sensors]
+highPrioritySensorIds=["memory/swap/total","memory/swap/used","memory/swap/usedPercent","memory/swap/free","memory/swap/freePercent"]
+
+[Face-52000000000005][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[Face-52000000000006][Appearance]
+Title=Memory Pressure History · Some vs Full
+chartFace=org.kde.ksysguard.linechart
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000006][SensorColors]
+pressure/memory/some10Sec=246,166,35
+pressure/memory/some60Sec=246,116,0
+pressure/memory/some300Sec=120,120,140
+pressure/memory/full10Sec=237,90,70
+pressure/memory/full60Sec=237,90,70
+pressure/memory/full300Sec=179,136,255
+
+[Face-52000000000006][SensorLabels]
+pressure/memory/some10Sec=Some · 10 sec
+pressure/memory/some60Sec=Some · 1 min
+pressure/memory/some300Sec=Some · 5 min
+pressure/memory/full10Sec=Full · 10 sec
+pressure/memory/full60Sec=Full · 1 min
+pressure/memory/full300Sec=Full · 5 min
+
+[Face-52000000000006][Sensors]
+highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec"]
+
+[Face-52000000000006][org.kde.ksysguard.linechart][General]
+historyAmount=240
+lineChartFillOpacity=7
+lineChartSmooth=true
+lineChartStacked=false
+rangeAutoY=false
+rangeFromY=0
+rangeToY=100
+showGridLines=true
+showLegend=true
+showYAxisLabels=true
+
+[Face-52000000000007][Appearance]
+Title=Memory Pressure · Complete PSI
+chartFace=org.kde.ksysguard.horizontalbars
+showTitle=true
+updateRateLimit=750
+
+[Face-52000000000007][SensorColors]
+pressure/memory/some10Sec=246,166,35
+pressure/memory/some60Sec=246,116,0
+pressure/memory/some300Sec=120,120,140
+pressure/memory/full10Sec=237,90,70
+pressure/memory/full60Sec=237,90,70
+pressure/memory/full300Sec=179,136,255
+pressure/memory/someTotal=120,120,140
+pressure/memory/fullTotal=120,120,140
+
+[Face-52000000000007][SensorLabels]
+pressure/memory/some10Sec=Some · 10 sec
+pressure/memory/some60Sec=Some · 1 min
+pressure/memory/some300Sec=Some · 5 min
+pressure/memory/full10Sec=Full · 10 sec
+pressure/memory/full60Sec=Full · 1 min
+pressure/memory/full300Sec=Full · 5 min
+pressure/memory/someTotal=Some stall time · total
+pressure/memory/fullTotal=Full stall time · total
+
+[Face-52000000000007][Sensors]
+highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec","pressure/memory/someTotal","pressure/memory/fullTotal"]
+
+[Face-52000000000007][org.kde.ksysguard.horizontalbars][General]
+rangeAuto=true
+
+[page]
+Title=Memory · Physical RAM and zram
+actionsFace=
+icon=memory
+loadType=ondemand
+margin=1
+version=1
+
+[page][row-0]
+Title=
+heightMode=half
+isTitle=false
+name=row-0
+
+[page][row-0][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-0][column-0][section-0]
+face=Face-52000000000001
+isSeparator=false
+name=section-0
+
+[page][row-0][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-0][column-1][section-0]
+face=Face-52000000000002
+isSeparator=false
+name=section-0
+
+[page][row-1]
+Title=
+heightMode=minimum
+isTitle=false
+name=row-1
+
+[page][row-1][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-1][column-0][section-0]
+face=Face-52000000000003
+isSeparator=false
+name=section-0
+
+[page][row-1][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-1][column-1][section-0]
+face=Face-52000000000005
+isSeparator=false
+name=section-0
+
+[page][row-2]
+Title=
+heightMode=half
+isTitle=false
+name=row-2
+
+[page][row-2][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-2][column-0][section-0]
+face=Face-52000000000004
+isSeparator=false
+name=section-0
+
+[page][row-2][column-1]
+name=column-1
+noMargins=false
+showBackground=true
+
+[page][row-2][column-1][section-0]
+face=Face-52000000000006
+isSeparator=false
+name=section-0
+
+[page][row-3]
+Title=
+heightMode=minimum
+isTitle=false
+name=row-3
+
+[page][row-3][column-0]
+name=column-0
+noMargins=false
+showBackground=true
+
+[page][row-3][column-0][section-0]
+face=Face-52000000000007
+isSeparator=false
+name=section-0
