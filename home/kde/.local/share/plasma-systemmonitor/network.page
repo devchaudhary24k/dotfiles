@@ -56,8 +56,8 @@ showLegend=true
 showYAxisLabels=true
 
 [Face-58000000000003][Appearance]
-Title=Transfer Totals
-chartFace=org.kde.ksysguard.horizontalbars
+Title=Transfer Totals · Counters
+chartFace=org.kde.ksysguard.textonly
 showTitle=true
 updateRateLimit=750
 
@@ -76,12 +76,12 @@ network/all/totalUpload=All interfaces uploaded
 [Face-58000000000003][Sensors]
 highPrioritySensorIds=["network/enp2s0/totalDownload","network/enp2s0/totalUpload","network/all/totalDownload","network/all/totalUpload"]
 
-[Face-58000000000003][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-58000000000003][org.kde.ksysguard.textonly][General]
+groupByTotal=false
 
 [Face-58000000000004][Appearance]
-Title=Alternate Rate Units · Bits per Second
-chartFace=org.kde.ksysguard.horizontalbars
+Title=Link Rates · 1 Gbit/s Scale
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -92,16 +92,16 @@ network/all/downloadBits=0,188,174
 network/all/uploadBits=179,136,255
 
 [Face-58000000000004][SensorLabels]
-network/enp2s0/downloadBits=enp2s0 download
-network/enp2s0/uploadBits=enp2s0 upload
-network/all/downloadBits=All interfaces download
-network/all/uploadBits=All interfaces upload
+network/enp2s0/downloadBits=enp2s0 download · 1 Gbit/s link
+network/enp2s0/uploadBits=enp2s0 upload · 1 Gbit/s link
+network/all/downloadBits=All interfaces download · 1 Gbit/s scale
+network/all/uploadBits=All interfaces upload · 1 Gbit/s scale
 
 [Face-58000000000004][Sensors]
 highPrioritySensorIds=["network/enp2s0/downloadBits","network/enp2s0/uploadBits","network/all/downloadBits","network/all/uploadBits"]
 
-[Face-58000000000004][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-58000000000004][org.kde.ksysguard.boundedbars][General]
+maximums={"network/enp2s0/downloadBits":1000000000,"network/enp2s0/uploadBits":1000000000,"network/all/downloadBits":1000000000,"network/all/uploadBits":1000000000}
 
 [Face-58000000000005][Appearance]
 Title=IPv4 and Link Context

@@ -1,0 +1,17 @@
+{
+    "KPackageStructure": "KSysguard/SensorFace",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Name": "devtalan"
+            }
+        ],
+        "Description": "Horizontal sensor bars with explicit per-sensor bounds",
+        "Icon": "view-list-text",
+        "Id": "org.kde.ksysguard.boundedbars",
+        "License": "GPL-2.0-or-later",
+        "Name": "Bounded Horizontal Bars",
+        "Version": "1.0"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell"
+}

@@ -74,7 +74,7 @@ lineChartSmooth=true
 lineChartStacked=false
 rangeAutoY=false
 rangeFromY=20
-rangeToY=100
+rangeToY=105
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -99,7 +99,9 @@ historyAmount=240
 lineChartFillOpacity=14
 lineChartSmooth=true
 lineChartStacked=false
-rangeAutoY=true
+rangeAutoY=false
+rangeFromY=0
+rangeToY=54
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -153,14 +155,16 @@ historyAmount=240
 lineChartFillOpacity=8
 lineChartSmooth=true
 lineChartStacked=false
-rangeAutoY=true
+rangeAutoY=false
+rangeFromY=0
+rangeToY=1.5
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
 
 [Face-54000000000007][Appearance]
 Title=Radeon Vega · Complete Working Telemetry
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -177,20 +181,21 @@ gpu/gpu1/in1=0,200,160
 
 [Face-54000000000007][SensorLabels]
 gpu/gpu1/usage=Utilization
-gpu/gpu1/temperature=Temperature
-gpu/gpu1/power1=PPT package power
+gpu/gpu1/temperature=Temperature · 105°C package max
+gpu/gpu1/power1=PPT package power · 54 W cTDP
 gpu/gpu1/coreFrequency=Core clock
 gpu/gpu1/memoryFrequency=Memory clock
-gpu/gpu1/usedVram=Shared memory used
+gpu/gpu1/usedVram=Shared memory used · 512 MiB
 gpu/gpu1/totalVram=Shared memory total
 gpu/gpu1/in0=vddgfx voltage
 gpu/gpu1/in1=vddnb voltage
 
 [Face-54000000000007][Sensors]
-highPrioritySensorIds=["gpu/gpu1/usage","gpu/gpu1/temperature","gpu/gpu1/power1","gpu/gpu1/coreFrequency","gpu/gpu1/memoryFrequency","gpu/gpu1/usedVram","gpu/gpu1/totalVram","gpu/gpu1/in0","gpu/gpu1/in1"]
+highPrioritySensorIds=["gpu/gpu1/usage","gpu/gpu1/temperature","gpu/gpu1/power1","gpu/gpu1/coreFrequency","gpu/gpu1/memoryFrequency","gpu/gpu1/usedVram","gpu/gpu1/in0","gpu/gpu1/in1"]
+lowPrioritySensorIds=["gpu/gpu1/totalVram"]
 
-[Face-54000000000007][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-54000000000007][org.kde.ksysguard.boundedbars][General]
+maximums={"gpu/gpu1/usage":100,"gpu/gpu1/temperature":105,"gpu/gpu1/power1":54,"gpu/gpu1/coreFrequency":1600,"gpu/gpu1/memoryFrequency":1600,"gpu/gpu1/usedVram":536870912,"gpu/gpu1/in0":1.5,"gpu/gpu1/in1":1.5}
 
 [page]
 Title=GPU 1 · Radeon Vega

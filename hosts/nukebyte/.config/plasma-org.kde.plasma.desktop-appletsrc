@@ -19,16 +19,19 @@ immutability=1
 plugin=org.kde.plasma.kickoff
 
 [Containments][23][Applets][24][Configuration]
-popupHeight=509
-popupWidth=647
+popupHeight=865
+popupWidth=1156
 
 [Containments][23][Applets][24][Configuration][ConfigDialog]
 DialogHeight=540
 DialogWidth=720
 
 [Containments][23][Applets][24][Configuration][General]
+compactMode=true
 favoritesPortedToKAstats=true
+highlightNewlyInstalledApps=false
 icon=org.cachyos.hello
+switchCategoryOnHover=true
 systemFavorites=suspend\\,hibernate\\,reboot\\,shutdown
 
 [Containments][23][Applets][24][Configuration][Shortcuts]

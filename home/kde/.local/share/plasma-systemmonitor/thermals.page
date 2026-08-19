@@ -27,7 +27,7 @@ lineChartSmooth=true
 lineChartStacked=false
 rangeAutoY=false
 rangeFromY=20
-rangeToY=100
+rangeToY=105
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -56,7 +56,7 @@ lineChartSmooth=true
 lineChartStacked=false
 rangeAutoY=false
 rangeFromY=20
-rangeToY=100
+rangeToY=105
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -140,7 +140,7 @@ lineChartSmooth=true
 lineChartStacked=false
 rangeAutoY=false
 rangeFromY=20
-rangeToY=100
+rangeToY=105
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -174,7 +174,7 @@ showYAxisLabels=true
 
 [Face-55000000000006][Appearance]
 Title=Thermal, Cooling and Dock Input Telemetry
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -195,26 +195,26 @@ lmsensors/ucsi_source_psy_USBC000:001-isa-0000/in0=0,188,174
 lmsensors/ucsi_source_psy_USBC000:001-isa-0000/curr1=0,200,160
 
 [Face-55000000000006][SensorLabels]
-cpu/all/minimumTemperature=CPU minimum
-cpu/all/averageTemperature=CPU average
-cpu/all/maximumTemperature=CPU maximum
-gpu/gpu0/temperature=RTX 3050
-gpu/gpu1/temperature=Radeon Vega
-lmsensors/acpitz_0-acpi-0/temp1=ACPI thermal zone
-lmsensors/nvme-pci-0400/temp1=NVMe composite
-lmsensors/nvme-pci-0400/temp2=NVMe sensor 1
-lmsensors/nvme-pci-0400/temp3=NVMe sensor 2
-lmsensors/mt7921_phy0-pci-0300/temp1=MT7921 Wi-Fi
-lmsensors/asus-isa-000a/fan1=CPU fan
-lmsensors/asus-isa-000a/fan2=GPU fan
-lmsensors/ucsi_source_psy_USBC000:001-isa-0000/in0=USB-C source voltage
-lmsensors/ucsi_source_psy_USBC000:001-isa-0000/curr1=USB-C source current
+cpu/all/minimumTemperature=CPU minimum · 105°C Tjmax
+cpu/all/averageTemperature=CPU average · 105°C Tjmax
+cpu/all/maximumTemperature=CPU maximum · 105°C Tjmax
+gpu/gpu0/temperature=RTX 3050 · 105°C max
+gpu/gpu1/temperature=Radeon Vega · 105°C package max
+lmsensors/acpitz_0-acpi-0/temp1=ACPI thermal zone · 105°C scale
+lmsensors/nvme-pci-0400/temp1=NVMe composite · 84.85°C critical
+lmsensors/nvme-pci-0400/temp2=NVMe sensor 1 · 84.85°C drive scale
+lmsensors/nvme-pci-0400/temp3=NVMe sensor 2 · 84.85°C drive scale
+lmsensors/mt7921_phy0-pci-0300/temp1=MT7921 Wi-Fi · 100°C scale
+lmsensors/asus-isa-000a/fan1=CPU fan · 6500 RPM scale
+lmsensors/asus-isa-000a/fan2=GPU fan · 6500 RPM scale
+lmsensors/ucsi_source_psy_USBC000:001-isa-0000/in0=USB-C source voltage · 20 V PD
+lmsensors/ucsi_source_psy_USBC000:001-isa-0000/curr1=USB-C source current · 5 A PD
 
 [Face-55000000000006][Sensors]
 highPrioritySensorIds=["cpu/all/minimumTemperature","cpu/all/averageTemperature","cpu/all/maximumTemperature","gpu/gpu0/temperature","gpu/gpu1/temperature","lmsensors/acpitz_0-acpi-0/temp1","lmsensors/nvme-pci-0400/temp1","lmsensors/nvme-pci-0400/temp2","lmsensors/nvme-pci-0400/temp3","lmsensors/mt7921_phy0-pci-0300/temp1","lmsensors/asus-isa-000a/fan1","lmsensors/asus-isa-000a/fan2","lmsensors/ucsi_source_psy_USBC000:001-isa-0000/in0","lmsensors/ucsi_source_psy_USBC000:001-isa-0000/curr1"]
 
-[Face-55000000000006][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-55000000000006][org.kde.ksysguard.boundedbars][General]
+maximums={"cpu/all/minimumTemperature":105,"cpu/all/averageTemperature":105,"cpu/all/maximumTemperature":105,"gpu/gpu0/temperature":105,"gpu/gpu1/temperature":105,"lmsensors/acpitz_0-acpi-0/temp1":105,"lmsensors/nvme-pci-0400/temp1":84.85,"lmsensors/nvme-pci-0400/temp2":84.85,"lmsensors/nvme-pci-0400/temp3":84.85,"lmsensors/mt7921_phy0-pci-0300/temp1":100,"lmsensors/asus-isa-000a/fan1":6500,"lmsensors/asus-isa-000a/fan2":6500,"lmsensors/ucsi_source_psy_USBC000:001-isa-0000/in0":20,"lmsensors/ucsi_source_psy_USBC000:001-isa-0000/curr1":5}
 
 [page]
 Title=Thermals & Cooling

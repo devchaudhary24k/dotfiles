@@ -26,29 +26,25 @@ showLegend=true
 rangeAuto=true
 
 [Face-56000000000002][Appearance]
-Title=Root Filesystem · Complete Capacity
+Title=Root Filesystem · Capacity Summary
 chartFace=org.kde.ksysguard.textonly
 showTitle=true
 updateRateLimit=2000
 
 [Face-56000000000002][SensorColors]
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/name=120,120,140
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=179,136,255
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=179,136,255
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=0,200,160
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/freePercent=0,200,160
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=120,120,140
 
 [Face-56000000000002][SensorLabels]
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/name=Filesystem
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=Used
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=Used percentage
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=Used
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=Free
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/freePercent=Free percentage
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=Total
 
 [Face-56000000000002][Sensors]
-highPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/name","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/freePercent","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total"]
+highPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/name","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total"]
 
 [Face-56000000000002][org.kde.ksysguard.textonly][General]
 groupByTotal=false
@@ -78,29 +74,25 @@ showLegend=true
 rangeAuto=true
 
 [Face-56000000000004][Appearance]
-Title=dm-crypt Layer · Complete Capacity
+Title=dm-crypt Layer · Capacity Summary
 chartFace=org.kde.ksysguard.textonly
 showTitle=true
 updateRateLimit=2000
 
 [Face-56000000000004][SensorColors]
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/name=120,120,140
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/used=61,174,233
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/usedPercent=61,174,233
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/free=0,200,160
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/freePercent=0,200,160
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/total=120,120,140
 
 [Face-56000000000004][SensorLabels]
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/name=Mapped device
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/used=Used
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/usedPercent=Used percentage
+disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/usedPercent=Used
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/free=Free
-disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/freePercent=Free percentage
 disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/total=Total
 
 [Face-56000000000004][Sensors]
-highPrioritySensorIds=["disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/name","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/used","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/usedPercent","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/free","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/freePercent","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/total"]
+highPrioritySensorIds=["disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/name","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/usedPercent","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/free","disk/fa0eb02d-e4ae-4255-a008-9acc352b0cda/total"]
 
 [Face-56000000000004][org.kde.ksysguard.textonly][General]
 groupByTotal=false
@@ -132,21 +124,17 @@ showTitle=true
 updateRateLimit=2000
 
 [Face-56000000000006][SensorColors]
-disk/all/used=246,116,0
 disk/all/usedPercent=246,116,0
 disk/all/free=0,200,160
-disk/all/freePercent=0,200,160
 disk/all/total=120,120,140
 
 [Face-56000000000006][SensorLabels]
-disk/all/used=Used across published layers
-disk/all/usedPercent=Used percentage
+disk/all/usedPercent=Used across published layers
 disk/all/free=Free across published layers
-disk/all/freePercent=Free percentage
 disk/all/total=Published-layer total
 
 [Face-56000000000006][Sensors]
-highPrioritySensorIds=["disk/all/used","disk/all/usedPercent","disk/all/free","disk/all/freePercent","disk/all/total"]
+highPrioritySensorIds=["disk/all/usedPercent","disk/all/free","disk/all/total"]
 
 [Face-56000000000006][org.kde.ksysguard.textonly][General]
 groupByTotal=false
@@ -236,4 +224,3 @@ showBackground=true
 face=Face-56000000000006
 isSeparator=false
 name=section-0
-

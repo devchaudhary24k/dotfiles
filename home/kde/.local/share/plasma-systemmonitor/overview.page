@@ -67,7 +67,7 @@ showYAxisLabels=true
 
 [Face-50000000000003][Appearance]
 Title=GPU 0 · RTX 3050
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -79,19 +79,19 @@ gpu/gpu0/usedVram=0,188,174
 
 [Face-50000000000003][SensorLabels]
 gpu/gpu0/usage=Utilization
-gpu/gpu0/temperature=Temperature
-gpu/gpu0/power=Board power
-gpu/gpu0/usedVram=VRAM used
+gpu/gpu0/temperature=Temperature · 105°C max
+gpu/gpu0/power=Board power · 60 W limit
+gpu/gpu0/usedVram=VRAM · 4 GiB
 
 [Face-50000000000003][Sensors]
 highPrioritySensorIds=["gpu/gpu0/usage","gpu/gpu0/temperature","gpu/gpu0/power","gpu/gpu0/usedVram"]
 
-[Face-50000000000003][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000003][org.kde.ksysguard.boundedbars][General]
+maximums={"gpu/gpu0/usage":100,"gpu/gpu0/temperature":105,"gpu/gpu0/power":60,"gpu/gpu0/usedVram":4294967296}
 
 [Face-50000000000004][Appearance]
 Title=GPU 1 · Radeon Vega
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -103,19 +103,19 @@ gpu/gpu1/usedVram=0,188,174
 
 [Face-50000000000004][SensorLabels]
 gpu/gpu1/usage=Utilization
-gpu/gpu1/temperature=Temperature
-gpu/gpu1/power1=PPT package power
-gpu/gpu1/usedVram=Shared memory used
+gpu/gpu1/temperature=Temperature · 105°C package max
+gpu/gpu1/power1=PPT package power · 54 W cTDP
+gpu/gpu1/usedVram=Shared memory · 512 MiB
 
 [Face-50000000000004][Sensors]
 highPrioritySensorIds=["gpu/gpu1/usage","gpu/gpu1/temperature","gpu/gpu1/power1","gpu/gpu1/usedVram"]
 
-[Face-50000000000004][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000004][org.kde.ksysguard.boundedbars][General]
+maximums={"gpu/gpu1/usage":100,"gpu/gpu1/temperature":105,"gpu/gpu1/power1":54,"gpu/gpu1/usedVram":536870912}
 
 [Face-50000000000005][Appearance]
 Title=Thermal Hotspots and Cooling
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -127,17 +127,17 @@ lmsensors/nvme-pci-0400/temp1=179,136,255
 lmsensors/mt7921_phy0-pci-0300/temp1=0,188,174
 
 [Face-50000000000005][SensorLabels]
-cpu/all/maximumTemperature=CPU maximum
-gpu/gpu0/temperature=RTX 3050
-gpu/gpu1/temperature=Radeon Vega
-lmsensors/nvme-pci-0400/temp1=NVMe composite
-lmsensors/mt7921_phy0-pci-0300/temp1=Wi-Fi
+cpu/all/maximumTemperature=CPU maximum · 105°C Tjmax
+gpu/gpu0/temperature=RTX 3050 · 105°C max
+gpu/gpu1/temperature=Radeon Vega · 105°C package max
+lmsensors/nvme-pci-0400/temp1=NVMe composite · 84.85°C critical
+lmsensors/mt7921_phy0-pci-0300/temp1=Wi-Fi · 100°C scale
 
 [Face-50000000000005][Sensors]
 highPrioritySensorIds=["cpu/all/maximumTemperature","gpu/gpu0/temperature","gpu/gpu1/temperature","lmsensors/nvme-pci-0400/temp1","lmsensors/mt7921_phy0-pci-0300/temp1"]
 
-[Face-50000000000005][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000005][org.kde.ksysguard.boundedbars][General]
+maximums={"cpu/all/maximumTemperature":105,"gpu/gpu0/temperature":105,"gpu/gpu1/temperature":105,"lmsensors/nvme-pci-0400/temp1":84.85,"lmsensors/mt7921_phy0-pci-0300/temp1":100}
 
 [Face-50000000000006][Appearance]
 Title=NVMe I/O · Physical Device
@@ -195,31 +195,30 @@ showYAxisLabels=true
 
 [Face-50000000000008][Appearance]
 Title=Root Filesystem · Btrfs on LUKS
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=2000
 
 [Face-50000000000008][SensorColors]
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=179,136,255
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=179,136,255
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=0,200,160
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=120,120,140
 
 [Face-50000000000008][SensorLabels]
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used=Used
-disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=Used percentage
+disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent=Used
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free=Free
 disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total=Capacity
 
 [Face-50000000000008][Sensors]
-highPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/used","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total"]
+highPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent"]
+lowPrioritySensorIds=["disk/96427823-4de4-4288-b6d1-42e995ed4d4c/free","disk/96427823-4de4-4288-b6d1-42e995ed4d4c/total"]
 
-[Face-50000000000008][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000008][org.kde.ksysguard.boundedbars][General]
+maximums={"disk/96427823-4de4-4288-b6d1-42e995ed4d4c/usedPercent":100}
 
 [Face-50000000000009][Appearance]
 Title=Kernel Pressure · 10 Second Window
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -240,12 +239,12 @@ pressure/io/full10Sec=I/O · fully stalled
 [Face-50000000000009][Sensors]
 highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/memory/some10Sec","pressure/memory/full10Sec","pressure/io/some10Sec","pressure/io/full10Sec"]
 
-[Face-50000000000009][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000009][org.kde.ksysguard.boundedbars][General]
+maximums={"pressure/cpu/some10Sec":100,"pressure/memory/some10Sec":100,"pressure/memory/full10Sec":100,"pressure/io/some10Sec":100,"pressure/io/full10Sec":100}
 
 [Face-50000000000010][Appearance]
 Title=Cooling, Power and Load
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=2000
 
@@ -257,17 +256,17 @@ gpu/gpu1/power1=237,90,70
 cpu/loadaverages/loadaverage1=246,166,35
 
 [Face-50000000000010][SensorLabels]
-lmsensors/asus-isa-000a/fan1=CPU fan
-lmsensors/asus-isa-000a/fan2=GPU fan
-gpu/gpu0/power=RTX board power
-gpu/gpu1/power1=Radeon package power
-cpu/loadaverages/loadaverage1=Load average · 1 min
+lmsensors/asus-isa-000a/fan1=CPU fan · 6500 RPM scale
+lmsensors/asus-isa-000a/fan2=GPU fan · 6500 RPM scale
+gpu/gpu0/power=RTX board power · 60 W limit
+gpu/gpu1/power1=Radeon package power · 54 W cTDP
+cpu/loadaverages/loadaverage1=Load average · 16 logical CPUs
 
 [Face-50000000000010][Sensors]
 highPrioritySensorIds=["lmsensors/asus-isa-000a/fan1","lmsensors/asus-isa-000a/fan2","gpu/gpu0/power","gpu/gpu1/power1","cpu/loadaverages/loadaverage1"]
 
-[Face-50000000000010][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-50000000000010][org.kde.ksysguard.boundedbars][General]
+maximums={"lmsensors/asus-isa-000a/fan1":6500,"lmsensors/asus-isa-000a/fan2":6500,"gpu/gpu0/power":60,"gpu/gpu1/power1":54,"cpu/loadaverages/loadaverage1":16}
 
 [Face-50000000000011][Appearance]
 Title=Processes · Operational Triage

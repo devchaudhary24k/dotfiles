@@ -74,7 +74,7 @@ lineChartSmooth=true
 lineChartStacked=false
 rangeAutoY=false
 rangeFromY=20
-rangeToY=100
+rangeToY=105
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -99,7 +99,9 @@ historyAmount=240
 lineChartFillOpacity=14
 lineChartSmooth=true
 lineChartStacked=false
-rangeAutoY=true
+rangeAutoY=false
+rangeFromY=0
+rangeToY=60
 showGridLines=true
 showLegend=true
 showYAxisLabels=true
@@ -133,7 +135,7 @@ showYAxisLabels=true
 
 [Face-53000000000006][Appearance]
 Title=RTX 3050 · Complete Telemetry
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -148,18 +150,19 @@ gpu/gpu0/totalVram=120,120,140
 
 [Face-53000000000006][SensorLabels]
 gpu/gpu0/usage=Utilization
-gpu/gpu0/temperature=Temperature
-gpu/gpu0/power=Board power
+gpu/gpu0/temperature=Temperature · 105°C max
+gpu/gpu0/power=Board power · 60 W limit
 gpu/gpu0/coreFrequency=Core clock
 gpu/gpu0/memoryFrequency=Memory clock
-gpu/gpu0/usedVram=VRAM used
+gpu/gpu0/usedVram=VRAM used · 4 GiB
 gpu/gpu0/totalVram=VRAM total
 
 [Face-53000000000006][Sensors]
-highPrioritySensorIds=["gpu/gpu0/usage","gpu/gpu0/temperature","gpu/gpu0/power","gpu/gpu0/coreFrequency","gpu/gpu0/memoryFrequency","gpu/gpu0/usedVram","gpu/gpu0/totalVram"]
+highPrioritySensorIds=["gpu/gpu0/usage","gpu/gpu0/temperature","gpu/gpu0/power","gpu/gpu0/coreFrequency","gpu/gpu0/memoryFrequency","gpu/gpu0/usedVram"]
+lowPrioritySensorIds=["gpu/gpu0/totalVram"]
 
-[Face-53000000000006][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-53000000000006][org.kde.ksysguard.boundedbars][General]
+maximums={"gpu/gpu0/usage":100,"gpu/gpu0/temperature":105,"gpu/gpu0/power":60,"gpu/gpu0/coreFrequency":2100,"gpu/gpu0/memoryFrequency":6001,"gpu/gpu0/usedVram":4294967296}
 
 [Face-53000000000007][Appearance]
 Title=ASUS GPU Fan · Cooling Response

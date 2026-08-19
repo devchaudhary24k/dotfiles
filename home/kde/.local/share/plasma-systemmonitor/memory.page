@@ -62,42 +62,33 @@ showLegend=true
 showYAxisLabels=true
 
 [Face-52000000000003][Appearance]
-Title=Physical Memory · Raw and Percentage Values
-chartFace=org.kde.ksysguard.horizontalbars
+Title=Physical Memory · Percentage Breakdown
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
 [Face-52000000000003][SensorColors]
 memory/physical/total=120,120,140
-memory/physical/used=61,174,233
 memory/physical/usedPercent=61,174,233
-memory/physical/free=0,200,160
 memory/physical/freePercent=0,200,160
-memory/physical/application=179,136,255
 memory/physical/applicationPercent=179,136,255
-memory/physical/cache=0,188,174
 memory/physical/cachePercent=0,188,174
-memory/physical/buffer=246,166,35
 memory/physical/bufferPercent=246,166,35
 
 [Face-52000000000003][SensorLabels]
 memory/physical/total=Total
-memory/physical/used=Used
-memory/physical/usedPercent=Used percentage
-memory/physical/free=Free
-memory/physical/freePercent=Free percentage
-memory/physical/application=Applications
-memory/physical/applicationPercent=Applications percentage
-memory/physical/cache=Cache
-memory/physical/cachePercent=Cache percentage
-memory/physical/buffer=Buffers
-memory/physical/bufferPercent=Buffers percentage
+memory/physical/usedPercent=Used
+memory/physical/freePercent=Free
+memory/physical/applicationPercent=Applications
+memory/physical/cachePercent=Cache
+memory/physical/bufferPercent=Buffers
 
 [Face-52000000000003][Sensors]
-highPrioritySensorIds=["memory/physical/total","memory/physical/used","memory/physical/usedPercent","memory/physical/free","memory/physical/freePercent","memory/physical/application","memory/physical/applicationPercent","memory/physical/cache","memory/physical/cachePercent","memory/physical/buffer","memory/physical/bufferPercent"]
+highPrioritySensorIds=["memory/physical/usedPercent","memory/physical/applicationPercent","memory/physical/cachePercent","memory/physical/bufferPercent","memory/physical/freePercent"]
+lowPrioritySensorIds=["memory/physical/total"]
 
-[Face-52000000000003][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-52000000000003][org.kde.ksysguard.boundedbars][General]
+maximums={"memory/physical/usedPercent":100,"memory/physical/applicationPercent":100,"memory/physical/cachePercent":100,"memory/physical/bufferPercent":100,"memory/physical/freePercent":100}
 
 [Face-52000000000004][Appearance]
 Title=zram Swap · Used vs Total
@@ -124,30 +115,27 @@ showLegend=true
 rangeAuto=true
 
 [Face-52000000000005][Appearance]
-Title=zram Swap · Complete Telemetry
-chartFace=org.kde.ksysguard.horizontalbars
+Title=zram Swap · Utilization
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
 [Face-52000000000005][SensorColors]
 memory/swap/total=120,120,140
-memory/swap/used=179,136,255
 memory/swap/usedPercent=179,136,255
 memory/swap/free=0,200,160
-memory/swap/freePercent=0,200,160
 
 [Face-52000000000005][SensorLabels]
-memory/swap/total=Total
-memory/swap/used=Used
-memory/swap/usedPercent=Used percentage
+memory/swap/total=Capacity
+memory/swap/usedPercent=Used
 memory/swap/free=Free
-memory/swap/freePercent=Free percentage
 
 [Face-52000000000005][Sensors]
-highPrioritySensorIds=["memory/swap/total","memory/swap/used","memory/swap/usedPercent","memory/swap/free","memory/swap/freePercent"]
+highPrioritySensorIds=["memory/swap/usedPercent"]
+lowPrioritySensorIds=["memory/swap/free","memory/swap/total"]
 
-[Face-52000000000005][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-52000000000005][org.kde.ksysguard.boundedbars][General]
+maximums={"memory/swap/usedPercent":100}
 
 [Face-52000000000006][Appearance]
 Title=Memory Pressure History · Some vs Full
@@ -188,7 +176,7 @@ showYAxisLabels=true
 
 [Face-52000000000007][Appearance]
 Title=Memory Pressure · Complete PSI
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -213,10 +201,11 @@ pressure/memory/someTotal=Some stall time · total
 pressure/memory/fullTotal=Full stall time · total
 
 [Face-52000000000007][Sensors]
-highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec","pressure/memory/someTotal","pressure/memory/fullTotal"]
+highPrioritySensorIds=["pressure/memory/some10Sec","pressure/memory/some60Sec","pressure/memory/some300Sec","pressure/memory/full10Sec","pressure/memory/full60Sec","pressure/memory/full300Sec"]
+lowPrioritySensorIds=["pressure/memory/someTotal","pressure/memory/fullTotal"]
 
-[Face-52000000000007][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-52000000000007][org.kde.ksysguard.boundedbars][General]
+maximums={"pressure/memory/some10Sec":100,"pressure/memory/some60Sec":100,"pressure/memory/some300Sec":100,"pressure/memory/full10Sec":100,"pressure/memory/full60Sec":100,"pressure/memory/full300Sec":100}
 
 [page]
 Title=Memory · Physical RAM and zram

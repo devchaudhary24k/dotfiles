@@ -133,6 +133,19 @@ The customized Plasma System Monitor navigation and pages are stored in
 `home/kde/.local/share/plasma-systemmonitor/`. Several sensors are specific to
 `nukebyte`'s Ryzen/NVIDIA/Radeon/NVMe hardware.
 
+## SSH forwarding
+
+The public `home/ssh` package contains only Carbon's loopback port forwards.
+Private host addresses and identity configuration remain in the untracked
+`~/.ssh/config`, which loads the managed fragment through:
+
+```sshconfig
+Include ~/.ssh/config.d/*.conf
+```
+
+The forwarded ranges and their operational trade-offs are documented in
+[`docs/ssh.md`](docs/ssh.md). SSH keys are never tracked.
+
 ## Machine security profile
 
 `system/nukebyte/` records the public, device-labelled part of this laptop's

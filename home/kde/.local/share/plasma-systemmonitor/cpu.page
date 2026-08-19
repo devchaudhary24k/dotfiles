@@ -330,7 +330,7 @@ useSensorColor=true
 
 [Face-51000000000008][Appearance]
 Title=CPU Telemetry and Load Averages
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -348,7 +348,7 @@ cpu/loadaverages/loadaverage5=179,136,255
 cpu/loadaverages/loadaverage15=120,120,140
 
 [Face-51000000000008][SensorLabels]
-cpu/all/coreCount=Physical cores
+cpu/all/coreCount=Logical processors
 cpu/all/cpuCount=CPU packages
 cpu/all/minimumFrequency=Minimum clock
 cpu/all/averageFrequency=Average clock
@@ -361,14 +361,15 @@ cpu/loadaverages/loadaverage5=Load average · 5 min
 cpu/loadaverages/loadaverage15=Load average · 15 min
 
 [Face-51000000000008][Sensors]
-highPrioritySensorIds=["cpu/all/coreCount","cpu/all/cpuCount","cpu/all/minimumFrequency","cpu/all/averageFrequency","cpu/all/maximumFrequency","cpu/all/minimumTemperature","cpu/all/averageTemperature","cpu/all/maximumTemperature","cpu/loadaverages/loadaverage1","cpu/loadaverages/loadaverage5","cpu/loadaverages/loadaverage15"]
+highPrioritySensorIds=["cpu/all/minimumFrequency","cpu/all/averageFrequency","cpu/all/maximumFrequency","cpu/all/minimumTemperature","cpu/all/averageTemperature","cpu/all/maximumTemperature","cpu/loadaverages/loadaverage1","cpu/loadaverages/loadaverage5","cpu/loadaverages/loadaverage15"]
+lowPrioritySensorIds=["cpu/all/coreCount","cpu/all/cpuCount"]
 
-[Face-51000000000008][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-51000000000008][org.kde.ksysguard.boundedbars][General]
+maximums={"cpu/all/minimumFrequency":4200,"cpu/all/averageFrequency":4200,"cpu/all/maximumFrequency":4200,"cpu/all/minimumTemperature":105,"cpu/all/averageTemperature":105,"cpu/all/maximumTemperature":105,"cpu/loadaverages/loadaverage1":16,"cpu/loadaverages/loadaverage5":16,"cpu/loadaverages/loadaverage15":16}
 
 [Face-51000000000009][Appearance]
 Title=CPU Pressure · PSI
-chartFace=org.kde.ksysguard.horizontalbars
+chartFace=org.kde.ksysguard.boundedbars
 showTitle=true
 updateRateLimit=750
 
@@ -393,10 +394,11 @@ pressure/cpu/someTotal=Some stall time · total
 pressure/cpu/fullTotal=Full stall time · total
 
 [Face-51000000000009][Sensors]
-highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/cpu/some60Sec","pressure/cpu/some300Sec","pressure/cpu/full10Sec","pressure/cpu/full60Sec","pressure/cpu/full300Sec","pressure/cpu/someTotal","pressure/cpu/fullTotal"]
+highPrioritySensorIds=["pressure/cpu/some10Sec","pressure/cpu/some60Sec","pressure/cpu/some300Sec","pressure/cpu/full10Sec","pressure/cpu/full60Sec","pressure/cpu/full300Sec"]
+lowPrioritySensorIds=["pressure/cpu/someTotal","pressure/cpu/fullTotal"]
 
-[Face-51000000000009][org.kde.ksysguard.horizontalbars][General]
-rangeAuto=true
+[Face-51000000000009][org.kde.ksysguard.boundedbars][General]
+maximums={"pressure/cpu/some10Sec":100,"pressure/cpu/some60Sec":100,"pressure/cpu/some300Sec":100,"pressure/cpu/full10Sec":100,"pressure/cpu/full60Sec":100,"pressure/cpu/full300Sec":100}
 
 [page]
 Title=CPU · Ryzen 7 4800H
