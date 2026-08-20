@@ -6,4 +6,4 @@ else
     set -gx VISUAL vim
 end
 
-fish_add_path ~/.local/bin ~/.cargo/bin ~/.local/share/pnpm ~/.npm-global/bin ~/go/bin ~/.deno/bin
+fish_add_path ~/.local/bin ~/.cargo/bin ~/.local/share/pnpm ~/.npm-global/bin ~/go/bin ~/.deno/bin ~/Applications/depot_tools

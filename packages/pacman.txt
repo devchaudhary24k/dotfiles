@@ -92,6 +92,7 @@ hdparm
 hwdetect
 hwinfo
 inetutils
+isoimagewriter
 iwd
 jfsutils
 kate
@@ -204,8 +205,10 @@ stow
 sudo
 switcheroo-control
 sysfsutils
+tailscale
 tesseract-data-eng
 texinfo
+trash-cli
 ttf-bitstream-vera
 ttf-dejavu
 ttf-jetbrains-mono-nerd

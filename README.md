@@ -90,6 +90,28 @@ sanitization. Install both with:
 sudo pacman -S --needed stow jq
 ```
 
+## Fish ownership and Trash safety
+
+The user Fish configuration is fully declared in `home/fish/`; it does not
+source `/usr/share/cachyos-fish-config/cachyos-config.fish`. Fastfetch greeting,
+Bat man pages, command-history formatting, helper functions, key bindings,
+PATH additions, and shell aliases are user-owned dotfiles. The third-party
+`done` notification implementation remains package-owned under `/usr/share`,
+while its preferences are declared in the user config.
+
+In interactive Fish sessions, `cat` resolves to `bat` and `rm` is a function
+that moves operands to the FreeDesktop Trash through `trash-cli`. The wrapper
+accepts ordinary `-r`/`-R`/`-f` combinations, refuses `/`, `$HOME`, and the
+current directory, and rejects unsupported `rm` options. Fish scripts retain
+the real GNU `rm` semantics. Permanent deletion must therefore be explicit:
+
+```fish
+command rm -rf PATH
+```
+
+Trash management remains available through `trash-list`, `trash-restore`,
+`trash-empty`, and `trash-rm`.
+
 The repository uses file-level links via Stow's `--no-folding` option. This
 keeps application-created files in the normal home directory until they are
 explicitly reviewed and adopted.
