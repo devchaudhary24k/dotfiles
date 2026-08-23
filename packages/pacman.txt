@@ -156,6 +156,7 @@ nvidia-prime
 nvidia-settings
 nvidia-utils
 obs-studio
+obsidian
 opencl-nvidia
 openssh
 os-prober

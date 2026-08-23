@@ -12,6 +12,45 @@ This public profile records the reproducible part of the machine's boot chain:
 - Secure Boot managed by `sbctl`, retaining Microsoft trust; and
 - automatic TPM2 unlock bound to PCR 7, with password recovery retained.
 
+It also keeps reviewed source copies of the ASUS 60% battery charge-limit
+udev rule and system-sleep hook. As with every file below `system/`, these
+copies are not linked into the live system automatically.
+
+## Battery charge limit
+
+The ASUS WMI driver exposes the firmware charge ceiling at
+`/sys/class/power_supply/BAT1/charge_control_end_threshold`. The udev rule
+sets it to 60 when the battery is added at boot and again on battery change
+events. The system-sleep hook reasserts 60 immediately before suspend or
+hibernate and immediately after resume, without depending on a battery uevent.
+
+Install or restore the reviewed rule explicitly:
+
+```bash
+sudo install -Dm0644 \
+  ~/.dotfiles/system/nukebyte/etc/udev/rules.d/80-asus-battery-charge-limit.rules \
+  /etc/udev/rules.d/80-asus-battery-charge-limit.rules
+sudo install -Dm0755 \
+  ~/.dotfiles/system/nukebyte/usr/lib/systemd/system-sleep/80-asus-battery-charge-limit \
+  /usr/lib/systemd/system-sleep/80-asus-battery-charge-limit
+sudo udevadm control --reload
+printf 60 | sudo tee /sys/class/power_supply/BAT1/charge_control_end_threshold
+```
+
+Verify the live value and rule syntax:
+
+```bash
+cat /sys/class/power_supply/BAT1/charge_control_end_threshold
+sudo udevadm verify /etc/udev/rules.d/80-asus-battery-charge-limit.rules
+test -x /usr/lib/systemd/system-sleep/80-asus-battery-charge-limit
+```
+
+The limit is enforced by ASUS firmware while suspended. Linux cannot reapply
+anything while fully powered off; most ASUS platforms retain the firmware
+value across a power cycle, but this must be tested on the physical machine if
+powered-off charging is a hard requirement. The rule reapplies 60 as Linux
+boots.
+
 The current LUKS UUID and hardware identity are documented in
 `security-profile.conf`. The apply command discovers the live root LUKS device
 and UUID instead of blindly reusing those values after a reinstall.

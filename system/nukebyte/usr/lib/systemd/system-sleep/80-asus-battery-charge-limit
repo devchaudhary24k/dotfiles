@@ -1,0 +1,12 @@
+#!/bin/sh
+
+# Reassert the ASUS firmware charge ceiling around every systemd sleep mode.
+threshold=/sys/class/power_supply/BAT1/charge_control_end_threshold
+
+case "$1" in
+    pre|post)
+        if [ -w "$threshold" ]; then
+            printf '%s\n' 60 >"$threshold"
+        fi
+        ;;
+esac
