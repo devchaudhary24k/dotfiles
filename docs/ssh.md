@@ -1,25 +1,21 @@
 # SSH forwarding inventory
 
-`home/ssh/.ssh/config.d/carbon-forwards.conf` is a generated, public fragment
-loaded by the private `~/.ssh/config`. It applies only to `Host carbon` and
-binds listeners to `127.0.0.1` so they are not exposed to the local network.
+`home/ssh/.ssh/config.d/carbon-forwards.conf` is loaded by the private
+`~/.ssh/config`. It applies to the `carbon` host alias. The public fragment does
+not contain Carbon's address, an identity path, or credentials.
 
-Forwarded ports:
+Both ends of every forward bind to `127.0.0.1`. The fragment forwards these
+ports:
 
-- `3000` through `3005`;
-- `5000` through `5005`;
-- `4173`, `4321`, and `6006`.
+- `3000` through `3005`
+- `5000` through `5005`
+- `4173`, `4321`, and `6006`
 
-OpenSSH has no port-range syntax, so the fragment contains one `LocalForward`
-per port: 15 forwards in total. They activate automatically when T3 Code,
-Codex, or a terminal opens a new `carbon` SSH connection. Existing connections
-do not reload config changes.
+OpenSSH has no range syntax, so the file contains 15 `LocalForward` entries.
+Each successfully bound port remains reserved on nukebyte for the life of the
+SSH connection. `ExitOnForwardFailure no` lets a normal connection continue if
+one is busy. A client that overrides this setting can still fail the whole
+connection when any listed port is unavailable.
 
-Every successfully bound port is reserved locally for the lifetime of that SSH
-connection. `ExitOnForwardFailure no` protects ordinary `ssh carbon` sessions
-when a selected port is busy. T3 Code currently supplies
-`ExitOnForwardFailure=yes` on its command line, which overrides the config, so
-these 15 local ports must be free when T3 establishes its connection.
-
-The main SSH config, host IPs, `known_hosts`, control sockets, and all private
-keys remain outside this public repository.
+The private SSH config, Carbon's address, `known_hosts`, control sockets, and
+keys stay outside this repository.

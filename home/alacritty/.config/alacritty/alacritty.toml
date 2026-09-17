@@ -85,3 +85,8 @@ bindings = [
     { key = "C", mods = "Control|Shift", mode = "Vi", action = "ClearSelection" },
     { key = "Key0", mods = "Control", action = "ResetFontSize" },
 ]
+
+#[[keyboard.bindings]]
+#key = "Return"
+#mods = "Shift"
+#chars = "\u001B\r"

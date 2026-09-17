@@ -7,6 +7,19 @@ Switch to Last-Used Keyboard Layout=Meta+Alt+L,Meta+Alt+L,
 Switch to Next Keyboard Layout=Meta+Alt+K,Meta+Alt+K,
 _k_friendly_name=Keyboard Layout Switcher
 
+[com.anthropic.Claude]
+FEF378C15AE22B883CD0B5A220B181F2-Ctrl+Alt+Space=none,Ctrl+Alt+Space,Claude shortcut: Ctrl+Alt+Space
+_k_friendly_name=Claude
+
+[com.onepassword.OnePassword]
+0EBC8085E45276499D18537ACDB3C41B-Ctrl+Shift+Space=none,Ctrl+Shift+Space,1Password shortcut: Ctrl+Shift+Space
+E71A7D99A8423159130E338FB858E04E-=none,none,1Password shortcut:\s
+_k_friendly_name=1Password
+
+[com.t3tools.T3Code]
+_k_friendly_name=T3 Code (Nightly)
+t3-snap-shot-efb9bfc181af31c1=Ctrl+/,Ctrl+/,Capture a window
+
 [kaccess]
 Toggle Screen Reader On and Off=Meta+Alt+S,Meta+Alt+S,Toggle Screen Reader On and Off
 _k_friendly_name=Accessibility

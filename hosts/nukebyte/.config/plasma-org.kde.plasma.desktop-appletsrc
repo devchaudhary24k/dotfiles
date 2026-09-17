@@ -19,8 +19,8 @@ immutability=1
 plugin=org.kde.plasma.kickoff
 
 [Containments][23][Applets][24][Configuration]
-popupHeight=865
-popupWidth=1018
+popupHeight=509
+popupWidth=647
 
 [Containments][23][Applets][24][Configuration][ConfigDialog]
 DialogHeight=540
@@ -46,7 +46,7 @@ immutability=1
 plugin=org.kde.plasma.icontasks
 
 [Containments][23][Applets][26][Configuration][General]
-launchers=preferred://filemanager,applications:t3code-nightly.desktop,applications:Alacritty.desktop,applications:zen.desktop,applications:filezilla.desktop
+launchers=preferred://filemanager,applications:discord.desktop,applications:spotify.desktop,applications:zen.desktop,applications:firefox.desktop,applications:t3code-nightly.desktop,applications:com.anthropic.Claude.desktop,applications:Alacritty.desktop,applications:filezilla.desktop,applications:org.prismlauncher.PrismLauncher.desktop
 
 [Containments][23][Applets][27]
 immutability=1

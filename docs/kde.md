@@ -1,39 +1,34 @@
 # KDE configuration inventory
 
-These files are retained intentionally. KDE and Qt applications share several
-of them, so a file that looks unimportant may still affect the entire desktop.
+KDE and Qt applications share several settings files. Portable preferences stay
+in `home/kde/`. Files tied to nukebyte's hardware or desktop layout live in
+`hosts/nukebyte/`.
 
-## Portable KDE package
+## Shared KDE files
 
-- `kdeglobals`: shared colors, icon/style choices, fonts, and file-dialog
-  behavior. Removing it can produce a dark shell with light application views.
-- `dolphinrc`: Dolphin behavior and view preferences.
+- `kdeglobals`: colors, icons, style, and file-dialog behavior.
+- `dolphinrc`: Dolphin view and window preferences.
 - `kglobalshortcutsrc`: Plasma and application global shortcuts.
-- `kwinrc`: KWin behavior and tiling state.
-- `kcminputrc`: cursor and pointer settings currently used by this laptop.
-- `mimeapps.list`: default browser and URL-handler associations.
+- `mimeapps.list`: default browser and URL handlers.
 - `plasma-localerc`: locale preferences.
-- `plasmanotifyrc`: Plasma notification preferences.
-- `spectaclerc`: Spectacle capture preferences and application state.
-- `konsolerc`: Konsole integration preferences.
-- `systemmonitorrc` plus `plasma-systemmonitor/*.page`: the customized System
-  Monitor sidebar, overview, CPU, memory, GPU, thermal, storage, network,
-  pressure, process, and system pages.
+- `spectaclerc`: Spectacle annotation and save-folder preferences.
+- `plasma-systemmonitor/memory.page`: memory views.
+- `plasma-systemmonitor/pressure.page`: CPU, memory, and I/O pressure views.
+- `plasma-systemmonitor/processes-admin.page`: the administrator process view.
 
-## `nukebyte` host package
+Recent paths, window geometry, generated desktop-file identifiers, and other
+application state are not tracked.
 
-- `kwinoutputconfig.json`: physical display identities, positions, rotation,
-  resolution, and refresh rates.
-- `plasma-org.kde.plasma.desktop-appletsrc`: panels, launchers, widgets, and
-  desktop containment layout.
-- `plasmashellrc`: Plasma shell state associated with that layout.
-- `powermanagementprofilesrc`: laptop power-profile choices.
+## Nukebyte files
 
-## Safe cleanup rule
+- `kwinoutputconfig.json`: display identities and layout.
+- `plasma-org.kde.plasma.desktop-appletsrc`: panels, widgets, and desktop layout.
+- `plasmashellrc`: Plasma shell state for that layout.
+- `powermanagementprofilesrc`: laptop power settings.
+- `kcminputrc`: settings for nukebyte's mouse.
+- `kwinrc`: KWin tiling tied to nukebyte's displays.
+- `systemmonitorrc` and the other `plasma-systemmonitor/*.page` files: navigation
+  and views tied to nukebyte's CPU, GPUs, disks, sensors, and network interface.
 
-Do not unlink or delete one of these from the running desktop as a cleanup
-experiment. Copy the full KDE package into a disposable user account, remove
-one candidate there, log out and back in, and test Plasma plus KDE apps. Only a
-verified removal should be made in this repository. Caches, logs, histories,
-crash reports, and window-session data outside this explicit inventory remain
-untracked.
+These paths mirror their locations below `$HOME`. `dots link` includes them only
+when the active hostname is `nukebyte`.

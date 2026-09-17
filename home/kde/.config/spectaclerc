@@ -1,5 +1,7 @@
 [Annotations]
-annotationToolType=3
+annotationToolType=7
+rectangleFillColor=255,0,0,0
+rectangleStrokeColor=170,0,0
 
 [ImageSave]
 translatedScreenshotsFolder=Screenshots

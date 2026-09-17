@@ -6,10 +6,6 @@ DOTFILES_BIN_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 DOTFILES_ROOT_DIR="$(cd -- "$DOTFILES_BIN_DIR/.." && pwd -P)"
 DOTFILES_STOW_DIR="$DOTFILES_ROOT_DIR/home"
 DOTFILES_HOST_DIR="$DOTFILES_ROOT_DIR/hosts"
-DOTFILES_PACKAGE_DIR="$DOTFILES_ROOT_DIR/packages"
-DOTFILES_COLLECTOR_DIR="$DOTFILES_ROOT_DIR/collectors"
-DOTFILES_SNAPSHOT_DIR="$DOTFILES_ROOT_DIR/snapshots"
-DOTFILES_SYSTEM_DIR="$DOTFILES_ROOT_DIR/system"
 DOTFILES_TARGET_DIR="${HOME:?HOME is not set}"
 DOTFILES_HOST_NAME="$(hostnamectl --static 2>/dev/null || hostname)"
 
@@ -35,21 +31,15 @@ usage() {
 Usage: dots COMMAND [ARGUMENTS]
 
 Commands:
-  sync [--list|--only NAME]
-                      Refresh packages and every enabled app collector
-  snapshot            Refresh package and enabled-user-service manifests only
   add PACKAGE FILE    Adopt one reviewed regular file into a Stow package
   link [PACKAGE...]   Restow all or selected home packages
   unlink [PACKAGE...] Unstow all or selected home packages
   dry-run [PACKAGE...]
                       Preview links for all or selected home packages
   scan                Report unmanaged files near tracked configurations
-  machine ACTION [HOST] [ARGUMENTS...]
-                      Inspect or restore a host-labelled system profile
-  tui                 Open the interactive terminal interface
   status              Show Git status and a diff summary
   doctor              Check dependencies, managed links, and secret risks
-  help                 Show this help
+  help                Show this help
 EOF
 }
 
@@ -112,185 +102,6 @@ run_stow() {
             "${stow_operation[@]}" \
             "$DOTFILES_HOST_NAME"
     fi
-
-    if [[ "$operation" == link ]] && ((requested_package_count == 0)); then
-        need_command git
-        git -C "$DOTFILES_ROOT_DIR" config --local core.hooksPath .githooks
-        say "Repository hooks enabled."
-    fi
-}
-
-write_sorted_manifest() {
-    local destination=$1
-    shift
-    local temporary
-
-    mkdir -p -- "$(dirname -- "$destination")"
-    temporary="$(mktemp "${destination}.tmp.XXXXXX")"
-
-    if ! "$@" | LC_ALL=C sort -u >"$temporary"; then
-        rm -f -- "$temporary"
-        die "failed to generate $destination"
-    fi
-
-    chmod 0644 "$temporary"
-    mv -f -- "$temporary" "$destination"
-}
-
-native_packages() {
-    pacman -Qqen
-}
-
-foreign_packages() {
-    pacman -Qqem
-}
-
-flatpak_packages() {
-    flatpak list --app --columns=application
-}
-
-enabled_user_services() {
-    systemctl --user list-unit-files --state=enabled --no-legend \
-        | awk '{print $1}'
-}
-
-snapshot() {
-    need_command pacman
-
-    write_sorted_manifest "$DOTFILES_PACKAGE_DIR/pacman.txt" native_packages
-    write_sorted_manifest "$DOTFILES_PACKAGE_DIR/aur.txt" foreign_packages
-
-    if command -v flatpak >/dev/null 2>&1; then
-        write_sorted_manifest "$DOTFILES_PACKAGE_DIR/flatpak.txt" flatpak_packages
-    fi
-
-    if command -v systemctl >/dev/null 2>&1; then
-        write_sorted_manifest \
-            "$DOTFILES_PACKAGE_DIR/enabled-user-services.txt" \
-            enabled_user_services
-    fi
-
-    say "Package and service manifests updated."
-    git -C "$DOTFILES_ROOT_DIR" status --short -- packages 2>/dev/null || true
-}
-
-list_collectors() {
-    [[ -d "$DOTFILES_COLLECTOR_DIR" ]] || return 0
-    find "$DOTFILES_COLLECTOR_DIR" -mindepth 1 -maxdepth 1 -type f \
-        -perm -u=x -printf '%f\n' | LC_ALL=C sort
-}
-
-validate_collector_name() {
-    local collector_name=$1
-
-    [[ "$collector_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
-        || die "invalid collector name: $collector_name"
-    [[ -f "$DOTFILES_COLLECTOR_DIR/$collector_name" \
-       && -x "$DOTFILES_COLLECTOR_DIR/$collector_name" ]] \
-        || die "unknown or disabled collector: $collector_name"
-}
-
-run_collector() {
-    local collector_name=$1
-
-    validate_collector_name "$collector_name"
-    say "Syncing collector: $collector_name"
-    "$DOTFILES_COLLECTOR_DIR/$collector_name"
-}
-
-snapshot_file_looks_sensitive() {
-    local snapshot_file=$1
-    local assignment_pattern
-
-    assignment_pattern='(api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|server[_-]?password|restore[_-]?token|stream[_-]?key|password|passwd|credential|private[_-]?key)[[:space:]"]*[:=]'
-    LC_ALL=C grep -IqiE -- "$assignment_pattern" "$snapshot_file" \
-        || LC_ALL=C grep -IqiE -- \
-            '-----BEGIN ([A-Z ]+ )?PRIVATE KEY-----|[?&](token|key|auth|password)=' \
-            "$snapshot_file"
-}
-
-audit_snapshots() {
-    local snapshot_file found=0
-
-    [[ -d "$DOTFILES_SNAPSHOT_DIR" ]] || return 0
-    while IFS= read -r -d '' snapshot_file; do
-        if snapshot_file_looks_sensitive "$snapshot_file"; then
-            warn "sensitive-looking snapshot content: ${snapshot_file#"$DOTFILES_ROOT_DIR"/}"
-            found=1
-        fi
-    done < <(
-        find "$DOTFILES_SNAPSHOT_DIR" -type f ! -name README.md -print0
-    )
-
-    ((found == 0))
-}
-
-sync_all() {
-    local collector_name
-    local -a collectors=()
-
-    case $# in
-        0)
-            snapshot
-            mapfile -t collectors < <(list_collectors)
-            for collector_name in "${collectors[@]}"; do
-                run_collector "$collector_name"
-            done
-            ;;
-        1)
-            [[ "$1" == --list ]] || die "usage: dots sync [--list|--only NAME]"
-            list_collectors
-            return 0
-            ;;
-        2)
-            [[ "$1" == --only ]] || die "usage: dots sync [--list|--only NAME]"
-            run_collector "$2"
-            ;;
-        *)
-            die "usage: dots sync [--list|--only NAME]"
-            ;;
-    esac
-
-    audit_snapshots || die "snapshot safety audit failed"
-    say "Dotfiles sync completed."
-}
-
-list_machines() {
-    local machine_directory
-
-    [[ -d "$DOTFILES_SYSTEM_DIR" ]] || return 0
-    while IFS= read -r -d '' machine_directory; do
-        [[ -x "$machine_directory/security" ]] \
-            && basename -- "$machine_directory"
-    done < <(
-        find "$DOTFILES_SYSTEM_DIR" -mindepth 1 -maxdepth 1 -type d -print0
-    ) | LC_ALL=C sort
-}
-
-machine_command() {
-    local action=${1:-status}
-    local machine_name machine_script
-    (($# == 0)) || shift
-
-    if [[ "$action" == list ]]; then
-        (($# == 0)) || die "machine list accepts no arguments"
-        list_machines
-        return 0
-    fi
-
-    case "$action" in
-        status|plan|doctor|apply) ;;
-        *) die "usage: dots machine {list|status|plan|doctor|apply} [HOST] [ARGUMENTS...]" ;;
-    esac
-
-    machine_name=${1:-$DOTFILES_HOST_NAME}
-    (($# == 0)) || shift
-    [[ "$machine_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] \
-        || die "invalid machine name: $machine_name"
-    machine_script="$DOTFILES_SYSTEM_DIR/$machine_name/security"
-    [[ -x "$machine_script" ]] || die "unknown machine profile: $machine_name"
-
-    "$machine_script" "$action" "$@"
 }
 
 path_is_sensitive() {
@@ -487,7 +298,9 @@ scan_unmanaged() {
         done < <(find "$target_root" \( -type f -o -type l \) -print0)
     done
 
-    ((found == 0)) && say "No unmanaged neighbouring configuration files found."
+    if ((found == 0)); then
+        say "No unmanaged neighbouring configuration files found."
+    fi
 }
 
 check_managed_tree() {
@@ -528,35 +341,12 @@ check_managed_tree() {
     done
 }
 
-check_collectors() {
-    local collector_file collector_name
-
-    [[ -d "$DOTFILES_COLLECTOR_DIR" ]] || return 0
-    while IFS= read -r -d '' collector_file; do
-        collector_name="$(basename -- "$collector_file")"
-        [[ "$collector_name" == README.md ]] && continue
-
-        if [[ ! "$collector_name" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
-            warn "invalid collector filename: collectors/$collector_name"
-            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
-        elif [[ ! -x "$collector_file" ]]; then
-            warn "collector is disabled because it is not executable: $collector_name"
-            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
-        elif ! "$collector_file" --check; then
-            warn "collector check failed: $collector_name"
-            DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
-        fi
-    done < <(
-        find "$DOTFILES_COLLECTOR_DIR" -mindepth 1 -maxdepth 1 -type f -print0
-    )
-}
-
 doctor() {
-    local command_name suspicious_file hooks_path
+    local command_name suspicious_file
     local -a missing_commands=()
     DOTFILES_DOCTOR_ERRORS=0
 
-    for command_name in git pacman stow realpath; do
+    for command_name in git stow realpath; do
         command -v "$command_name" >/dev/null 2>&1 \
             || missing_commands+=("$command_name")
     done
@@ -572,30 +362,15 @@ doctor() {
             DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
         }
 
-    hooks_path="$(git -C "$DOTFILES_ROOT_DIR" config --local --get core.hooksPath \
-        2>/dev/null || true)"
-    if [[ "$hooks_path" != .githooks ]]; then
-        warn "repository hooks are not enabled; run: dots link"
-        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
-    fi
-
     check_managed_tree "$DOTFILES_STOW_DIR"
     if [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
         check_managed_tree "$DOTFILES_HOST_DIR" "$DOTFILES_HOST_NAME"
     fi
-    check_collectors
-
-    if ! audit_snapshots; then
-        DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
-    fi
-
     while IFS= read -r -d '' suspicious_file; do
         warn "review sensitive-looking filename: ${suspicious_file#"$DOTFILES_ROOT_DIR"/}"
         DOTFILES_DOCTOR_ERRORS=$((DOTFILES_DOCTOR_ERRORS + 1))
     done < <(
-        find "$DOTFILES_STOW_DIR" "$DOTFILES_HOST_DIR" \
-            "$DOTFILES_ROOT_DIR/system" "$DOTFILES_SNAPSHOT_DIR" \
-            -type f \
+        find "$DOTFILES_STOW_DIR" "$DOTFILES_HOST_DIR" -type f \
             \( -iname '*credential*' -o -iname '*private*key*' \
                -o -iname '*access*token*' -o -iname 'id_rsa' \
                -o -iname 'id_ed25519' -o -iname '*.pem' \) \
@@ -611,8 +386,14 @@ doctor() {
 
 status() {
     need_command git
+    say "Active host: $DOTFILES_HOST_NAME"
+    if [[ -d "$DOTFILES_HOST_DIR/$DOTFILES_HOST_NAME" ]]; then
+        say "Host package: hosts/$DOTFILES_HOST_NAME"
+    else
+        say "Host package: none"
+    fi
     git -C "$DOTFILES_ROOT_DIR" status --short --branch
-    git -C "$DOTFILES_ROOT_DIR" diff --stat
+    git -C "$DOTFILES_ROOT_DIR" diff --stat HEAD
 }
 
 main() {
@@ -620,15 +401,11 @@ main() {
     (($# == 0)) || shift
 
     case "$command" in
-        sync) sync_all "$@" ;;
-        snapshot) (($# == 0)) || die "snapshot accepts no arguments"; snapshot ;;
         add) add_file "$@" ;;
         link) run_stow link "$@" ;;
         unlink) run_stow unlink "$@" ;;
         dry-run) run_stow dry-run "$@" ;;
         scan) (($# == 0)) || die "scan accepts no arguments"; scan_unmanaged ;;
-        machine) machine_command "$@" ;;
-        tui) "$DOTFILES_ROOT_DIR/bin/dots-tui" "$@" ;;
         status) (($# == 0)) || die "status accepts no arguments"; status ;;
         doctor) (($# == 0)) || die "doctor accepts no arguments"; doctor ;;
         help|-h|--help) usage ;;
