@@ -15,9 +15,9 @@ home/git/.gitconfig
 home/git/.config/git/ignore
 home/fish/.config/fish
 home/starship/.config/starship.toml
-home/hypr/.config/hypr                desktop machines
-home/waybar/.config/waybar            desktop machines
-home/uwsm/.config/uwsm                desktop machines
+home/hypr/.config/hypr                machines with Hyprland on
+home/waybar/.config/waybar            machines with Hyprland on
+home/uwsm/.config/uwsm                machines with Hyprland on
 ```
 
 `home/hypr/.config/hypr/monitors/HOSTNAME.lua` is linked to
