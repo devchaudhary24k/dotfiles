@@ -6,22 +6,31 @@ caches, or backups.
 
 ## Consumers
 
-Nukebyte uses GNU Stow. Each directory below `home/` is a Stow package. Running
-`bin/dots link` links every home package and, when present, the package at
-`hosts/$(hostname)/` into `$HOME`.
-
-Carbon uses the repository as a Nix flake input and reads these paths directly:
+Both machines run NixOS from
+[`carbon-nix`](https://github.com/devchaudhary24k/carbon-nix), which takes this
+repository as a flake input and links these paths with Home Manager:
 
 ```text
 home/git/.gitconfig
-home/fish/.config/fish
 home/git/.config/git/ignore
+home/fish/.config/fish
 home/starship/.config/starship.toml
+home/hypr/.config/hypr                desktop machines
+home/waybar/.config/waybar            desktop machines
+home/uwsm/.config/uwsm                desktop machines
 ```
 
+`home/hypr/.config/hypr/monitors/HOSTNAME.lua` is linked to
+`~/.config/hypr/monitors.lua` on the matching machine.
+
 These paths are part of the interface to `carbon-nix`. If one moves, update
-`~/Code/carbon-nix/home/dev24k.nix` and build Carbon's system configuration over
-SSH before committing.
+`home/dev24k/` in `carbon-nix` to match. A change here reaches a machine after
+`nix flake update dotfiles` in `carbon-nix` and a rebuild.
+
+The packages Nix links are listed in `.nix-managed`, and `dots` leaves them
+alone. Everything else, including KDE settings that Plasma rewrites and the
+host package, is still linked with Stow by `bin/dots link`, because
+Nix-managed links are read-only.
 
 ## Layout
 
@@ -72,7 +81,8 @@ its output.
 
 ## Setup on nukebyte
 
-Install Git and GNU Stow, clone the repository at `~/.dotfiles`, then run:
+Clone the repository to `~/code/dotfiles` (Git and GNU Stow come with
+carbon-nix), then run:
 
 ```bash
 bin/dots dry-run

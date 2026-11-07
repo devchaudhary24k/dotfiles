@@ -1,0 +1,55 @@
+// Waybar, started by Hyprland (hyprland.lua) so it does not appear in KDE.
+{
+  "layer": "top",
+  "position": "top",
+  "height": 30,
+
+  "modules-left": ["hyprland/workspaces", "hyprland/window"],
+  "modules-center": ["clock"],
+  "modules-right": [
+    "tray",
+    "pulseaudio",
+    "network",
+    "bluetooth",
+    "cpu",
+    "memory",
+    "temperature",
+    "battery",
+    "custom/notifications"
+  ],
+
+  "clock": {
+    "format": "{:%a %d %b  %H:%M}",
+    "tooltip-format": "<tt>{calendar}</tt>"
+  },
+  "cpu": { "format": "CPU {usage}%" },
+  "memory": { "format": "RAM {percentage}%" },
+  "temperature": { "format": "{temperatureC}°C" },
+  "battery": {
+    "format": "BAT {capacity}%",
+    "format-charging": "CHG {capacity}%",
+    "states": { "warning": 20 }
+  },
+  "network": {
+    "format-wifi": "{essid} {signalStrength}%",
+    "format-ethernet": "LAN",
+    "format-disconnected": "offline",
+    "tooltip-format": "{ifname} {ipaddr}"
+  },
+  "pulseaudio": {
+    "format": "VOL {volume}%",
+    "format-muted": "muted",
+    "on-click": "pavucontrol"
+  },
+  "bluetooth": {
+    "format": "BT",
+    "format-off": "",
+    "on-click": "blueman-manager"
+  },
+  "tray": { "spacing": 8 },
+  "custom/notifications": {
+    "format": "NOTIF",
+    "on-click": "swaync-client -t -sw",
+    "tooltip": false
+  }
+}
