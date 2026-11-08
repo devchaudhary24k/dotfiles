@@ -2,7 +2,4 @@
 # `dots` leaves these alone, so Stow and Nix never fight over the same file.
 fish
 git
-hypr
 starship
-uwsm
-waybar

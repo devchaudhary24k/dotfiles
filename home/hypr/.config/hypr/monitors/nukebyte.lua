@@ -1,5 +1,5 @@
--- Nukebyte's monitors. carbon-nix links this file to ~/.config/hypr/monitors.lua
--- on nukebyte, and hyprland.lua loads it from there.
+-- Nukebyte's monitors. hyprland.lua loads this file on the machine whose
+-- /etc/hostname is nukebyte.
 --
 -- Run `hyprctl monitors` to see each monitor's description. Rules match by
 -- description, so they follow a monitor to whichever port it is plugged into.

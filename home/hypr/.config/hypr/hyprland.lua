@@ -16,8 +16,8 @@ local mainMod     = "SUPER"
 -- Monitors
 --
 -- Any monitor without its own rule gets its highest refresh rate and is
--- placed automatically. A machine's own layout is in monitors/<hostname>.lua;
--- carbon-nix links it to monitors.lua, which is loaded here when present.
+-- placed automatically. A machine's own layout is in monitors/<hostname>.lua,
+-- loaded here when it exists.
 ------------------------------------------------------------------------------
 
 hl.monitor({
@@ -27,8 +27,13 @@ hl.monitor({
     scale    = 1,
 })
 
-local ok, err = pcall(require, "monitors")
-if not ok and not tostring(err):find("module 'monitors' not found", 1, true) then
+local hostFile = io.open("/etc/hostname")
+local hostname = hostFile and hostFile:read("l") or ""
+if hostFile then hostFile:close() end
+
+local layout = "monitors." .. hostname
+local ok, err = pcall(require, layout)
+if not ok and not tostring(err):find("module '" .. layout .. "' not found", 1, true) then
     error(err)
 end
 

@@ -15,22 +15,24 @@ home/git/.gitconfig
 home/git/.config/git/ignore
 home/fish/.config/fish
 home/starship/.config/starship.toml
-home/hypr/.config/hypr                machines with Hyprland on
-home/waybar/.config/waybar            machines with Hyprland on
-home/uwsm/.config/uwsm                machines with Hyprland on
 ```
-
-`home/hypr/.config/hypr/monitors/HOSTNAME.lua` is linked to
-`~/.config/hypr/monitors.lua` on the matching machine.
 
 These paths are part of the interface to `carbon-nix`. If one moves, update
 `home/dev24k/` in `carbon-nix` to match. A change here reaches a machine after
 `nix flake update dotfiles` in `carbon-nix` and a rebuild.
 
 The packages Nix links are listed in `.nix-managed`, and `dots` leaves them
-alone. Everything else, including KDE settings that Plasma rewrites and the
-host package, is still linked with Stow by `bin/dots link`, because
-Nix-managed links are read-only.
+alone. Everything else is linked with Stow by `bin/dots link`, because
+Nix-managed links are read-only. That includes the Hyprland, Waybar and UWSM
+files, so an edit under `~/.config/hypr` lands in this repo straight away and
+`hyprctl reload` picks it up:
+
+```bash
+bin/dots link hypr waybar uwsm
+```
+
+Each machine's monitor layout is `home/hypr/.config/hypr/monitors/HOSTNAME.lua`;
+`hyprland.lua` loads the one matching `/etc/hostname`.
 
 ## Layout
 
