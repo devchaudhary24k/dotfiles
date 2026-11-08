@@ -6,22 +6,33 @@ caches, or backups.
 
 ## Consumers
 
-Nukebyte uses GNU Stow. Each directory below `home/` is a Stow package. Running
-`bin/dots link` links every home package and, when present, the package at
-`hosts/$(hostname)/` into `$HOME`.
-
-Carbon uses the repository as a Nix flake input and reads these paths directly:
+Both machines run NixOS from
+[`carbon-nix`](https://github.com/devchaudhary24k/carbon-nix), which takes this
+repository as a flake input and links these paths with Home Manager:
 
 ```text
 home/git/.gitconfig
-home/fish/.config/fish
 home/git/.config/git/ignore
+home/fish/.config/fish
 home/starship/.config/starship.toml
 ```
 
 These paths are part of the interface to `carbon-nix`. If one moves, update
-`~/Code/carbon-nix/home/dev24k.nix` and build Carbon's system configuration over
-SSH before committing.
+`home/dev24k/` in `carbon-nix` to match. A change here reaches a machine after
+`nix flake update dotfiles` in `carbon-nix` and a rebuild.
+
+The packages Nix links are listed in `.nix-managed`, and `dots` leaves them
+alone. Everything else is linked with Stow by `bin/dots link`, because
+Nix-managed links are read-only. That includes the Hyprland, Waybar and UWSM
+files, so an edit under `~/.config/hypr` lands in this repo straight away and
+`hyprctl reload` picks it up:
+
+```bash
+bin/dots link hypr waybar uwsm
+```
+
+Each machine's monitor layout is `home/hypr/.config/hypr/monitors/HOSTNAME.lua`;
+`hyprland.lua` loads the one matching `/etc/hostname`.
 
 ## Layout
 
@@ -72,7 +83,8 @@ its output.
 
 ## Setup on nukebyte
 
-Install Git and GNU Stow, clone the repository at `~/.dotfiles`, then run:
+Clone the repository to `~/code/dotfiles` (Git and GNU Stow come with
+carbon-nix), then run:
 
 ```bash
 bin/dots dry-run

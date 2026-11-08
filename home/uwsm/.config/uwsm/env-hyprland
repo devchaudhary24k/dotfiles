@@ -1,0 +1,10 @@
+# Read by UWSM before Hyprland starts.
+#
+# On a hybrid AMD + NVIDIA laptop (nukebyte), Hyprland renders on the AMD iGPU
+# and hands frames to the NVIDIA GPU for the monitor wired to it. The two
+# device names are stable udev links that carbon-nix creates on such machines
+# (modules/desktop/default.nix). Elsewhere they do not exist, and this does
+# nothing.
+if [ -e /dev/dri/amd-igpu ] && [ -e /dev/dri/nvidia-dgpu ]; then
+  export AQ_DRM_DEVICES=/dev/dri/amd-igpu:/dev/dri/nvidia-dgpu
+fi
