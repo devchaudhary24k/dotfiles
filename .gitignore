@@ -3,6 +3,3 @@
 *.swp
 *.swo
 .DS_Store
-
-# Local Nix build result.
-result

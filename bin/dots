@@ -8,7 +8,6 @@ DOTFILES_STOW_DIR="$DOTFILES_ROOT_DIR/home"
 DOTFILES_HOST_DIR="$DOTFILES_ROOT_DIR/hosts"
 DOTFILES_TARGET_DIR="${HOME:?HOME is not set}"
 DOTFILES_HOST_NAME="$(hostnamectl --static 2>/dev/null || hostname)"
-DOTFILES_NIX_MANAGED_FILE="$DOTFILES_ROOT_DIR/.nix-managed"
 
 say() {
     printf '%s\n' "$*"
@@ -52,16 +51,6 @@ list_packages() {
         | LC_ALL=C sort
 }
 
-# Home packages that carbon-nix links with Home Manager. Stow skips them.
-nix_managed_packages() {
-    [[ -f "$DOTFILES_NIX_MANAGED_FILE" ]] || return 0
-    grep -vE '^[[:space:]]*(#|$)' "$DOTFILES_NIX_MANAGED_FILE" || true
-}
-
-is_nix_managed() {
-    nix_managed_packages | grep -qxF -- "$1"
-}
-
 validate_packages() {
     local package
 
@@ -70,8 +59,6 @@ validate_packages() {
             || die "invalid package name: $package"
         [[ -d "$DOTFILES_STOW_DIR/$package" ]] \
             || die "unknown home package: $package"
-        ! is_nix_managed "$package" \
-            || die "$package is linked by carbon-nix (see .nix-managed)"
     done
 }
 
@@ -85,10 +72,7 @@ run_stow() {
     need_command stow
 
     if ((${#packages[@]} == 0)); then
-        mapfile -t packages < <(
-            list_packages "$DOTFILES_STOW_DIR" \
-                | grep -vxF -f <(nix_managed_packages; printf '%s\n' '#') || true
-        )
+        mapfile -t packages < <(list_packages "$DOTFILES_STOW_DIR")
     else
         validate_packages "${packages[@]}"
     fi
@@ -338,11 +322,6 @@ check_managed_tree() {
     fi
 
     for package_path in "${package_paths[@]}"; do
-        if [[ "$package_root" == "$DOTFILES_STOW_DIR" ]] \
-            && is_nix_managed "${package_path##*/}"; then
-            continue
-        fi
-
         while IFS= read -r -d '' source_path; do
             relative_path="${source_path#"$package_path"/}"
             target_path="$DOTFILES_TARGET_DIR/$relative_path"

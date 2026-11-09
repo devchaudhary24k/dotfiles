@@ -1,5 +1,0 @@
-# Packages under home/ that carbon-nix links with Home Manager on NixOS.
-# `dots` leaves these alone, so Stow and Nix never fight over the same file.
-fish
-git
-starship

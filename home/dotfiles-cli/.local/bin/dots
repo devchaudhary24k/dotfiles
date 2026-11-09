@@ -2,7 +2,11 @@
 
 set -Eeuo pipefail
 
-DOTFILES_REPOSITORY_DIR="${DOTFILES_REPOSITORY:-${HOME:?HOME is not set}/.dotfiles}"
+# Stow links this file into ~/.local/bin. Following that link leads back to
+# home/dotfiles-cli/.local/bin/ in the repository, four levels below its root,
+# so the repository can live anywhere. DOTFILES_REPOSITORY overrides this.
+self="$(readlink -f -- "${BASH_SOURCE[0]}")"
+DOTFILES_REPOSITORY_DIR="${DOTFILES_REPOSITORY:-$(cd -- "$(dirname -- "$self")/../../../.." && pwd -P)}"
 DOTFILES_COMMAND="$DOTFILES_REPOSITORY_DIR/bin/dots"
 
 if [[ ! -x "$DOTFILES_COMMAND" ]]; then
