@@ -1,0 +1,77 @@
+# Ghostty configuration. Reload with ctrl+shift+, ; check with
+#   ghostty +validate-config
+# Every option: ghostty +show-config --default --docs
+
+# Look -----------------------------------------------------------------------
+
+# Catppuccin Mocha, built into Ghostty: deep blue-grey background, soft
+# colours, all of them at 7:1 contrast or better. Same family as Micro's
+# catppuccin-macchiato.
+theme = Catppuccin Mocha
+# Bright black is the dim grey for fish's autosuggestions and comments. The
+# theme's own (#585b70) is hard to read at 2.5:1; Catppuccin's overlay1 is
+# 4.4:1, still clearly dimmer than normal text.
+palette = 8=#7f849c
+
+font-family = JetBrainsMono Nerd Font
+font-size = 10
+# A little extra line height; easier on the eyes in long sessions.
+adjust-cell-height = 6%
+
+# Slightly see-through, with KWin blurring what is behind.
+background-opacity = 0.92
+background-blur = true
+
+window-padding-x = 10
+window-padding-y = 8
+# Spread leftover space evenly so text is not glued to one edge.
+window-padding-balance = true
+
+# KDE draws the title bar (Breeze, like every other window); the GTK header
+# bar is dropped. Tabs and menus take their colours from the theme.
+window-decoration = server
+gtk-titlebar = false
+window-theme = ghostty
+
+window-width = 140
+window-height = 38
+
+# Same cursor as Alacritty: a steady underline. The shell integration's
+# cursor feature is off below so the prompt does not switch it to a bar.
+cursor-style = underline
+cursor-style-blink = false
+
+# Dim the splits that do not have focus, but keep them readable.
+unfocused-split-opacity = 0.85
+
+# Nudge colour pairs that would be unreadable (a program printing dark blue
+# on black, say) just enough to read.
+minimum-contrast = 1.1
+
+# Behaviour ------------------------------------------------------------------
+
+# Selecting text copies it to the clipboard as well as the primary selection.
+copy-on-select = clipboard
+mouse-hide-while-typing = true
+
+# No size popup while resizing; no toast on every copy.
+resize-overlay = never
+app-notifications = no-clipboard-copy
+
+# Shell integration (fish is detected automatically):
+#   sudo     keeps Ghostty's terminal definition working under sudo
+#   title    window title follows the running command and directory
+#   ssh-env  over ssh, tell the remote host TERM=xterm-256color, which every
+#            server understands; nothing is written on the server
+#   path     keeps Ghostty's helpers on PATH
+shell-integration-features = no-cursor,sudo,title,ssh-env,no-ssh-terminfo,path
+
+# Keys -----------------------------------------------------------------------
+# Defaults kept, including:
+#   ctrl+shift+t / w        new tab / close
+#   ctrl+shift+o / e        split right / split down
+#   ctrl+alt+arrows         move between splits
+#   ctrl+shift+enter        zoom the current split
+#   ctrl+shift+f            search the scrollback
+#   ctrl+shift+arrow up/dn  jump to the previous / next prompt
+#   ctrl+shift+p            command palette
