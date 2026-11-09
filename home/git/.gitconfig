@@ -3,7 +3,7 @@
 	name = Dev Talan
 
 [core]
-	editor = vim
+	# No editor here: Git uses $VISUAL / $EDITOR, which fish sets to nvim.
 	pager = delta
 	whitespace = trailing-space,space-before-tab
 
@@ -31,7 +31,10 @@
 	useForceIfIncludes = true
 
 [pull]
-	ff = only
+	# When your branch and its remote both have new commits, replay yours on
+	# top of theirs instead of refusing (ff = only) or making a merge commit.
+	# Uncommitted changes are stashed and restored (rebase.autoStash below).
+	rebase = true
 
 [commit]
 	verbose = true
