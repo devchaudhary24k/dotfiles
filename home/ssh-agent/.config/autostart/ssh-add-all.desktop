@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=SSH keys
+Comment=Load SSH keys into the agent, with passphrases from KWallet
+Exec=sh -c "\\$HOME/.local/bin/ssh-add-all"
+Icon=dialog-password
+Terminal=false
+NoDisplay=true
+X-KDE-autostart-after=panel

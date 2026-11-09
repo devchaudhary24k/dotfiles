@@ -1,0 +1,38 @@
+#!/bin/sh
+# Load every SSH key under ~/.ssh into the agent.
+#
+# A private key counts when a matching KEY.pub sits next to it. Passphrases
+# are asked through ksshaskpass: tick "Remember password" the first time and
+# KWallet keeps it, so later runs (at every login, from the autostart entry)
+# add the keys without asking. Keys already in the agent are skipped.
+
+set -u
+
+: "${SSH_AUTH_SOCK:=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket}"
+: "${SSH_ASKPASS:=/usr/bin/ksshaskpass}"
+SSH_ASKPASS_REQUIRE=prefer
+export SSH_AUTH_SOCK SSH_ASKPASS SSH_ASKPASS_REQUIRE
+
+loaded="$(ssh-add -l 2>/dev/null || true)"
+status=0
+
+# One path per line; no word splitting on spaces, no glob expansion.
+IFS='
+'
+set -f
+for pub in $(find "$HOME/.ssh" -type f -name '*.pub' | sort); do
+    key="${pub%.pub}"
+    [ -f "$key" ] || continue
+
+    fingerprint="$(ssh-keygen -l -f "$pub" | awk '{print $2}')"
+    case "$loaded" in
+        *"$fingerprint"*) continue ;;
+    esac
+
+    if ! ssh-add -q "$key" </dev/null; then
+        printf 'ssh-add-all: could not add %s\n' "$key" >&2
+        status=1
+    fi
+done
+
+exit "$status"
