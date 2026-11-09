@@ -5,3 +5,4 @@
 .config/micro/syntax/*
 .config/micro/colorschemes/*
 
+.config/git/local.gitconfig

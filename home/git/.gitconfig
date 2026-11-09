@@ -100,3 +100,9 @@
 	autosquash = rebase --interactive --autosquash
 	pf = push --force-with-lease --force-if-includes
 	root = rev-parse --show-toplevel
+
+# Settings for one machine only, such as commit signing on nukebyte. The file
+# is not in the dotfiles; Git skips this include where it does not exist.
+# Last, so it can override anything above.
+[include]
+	path = ~/.config/git/local.gitconfig
