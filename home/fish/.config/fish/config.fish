@@ -1,25 +1,18 @@
-# User-owned replacement for the CachyOS main Fish config. The optional
-# notification plugin remains package-owned; personal behavior lives here.
-if status is-interactive; and test -r /usr/share/cachyos-fish-config/conf.d/done.fish
-    source /usr/share/cachyos-fish-config/conf.d/done.fish
-end
-
 function fish_greeting
-    if type -q fastfetch
-        fastfetch
-    end
+    type -q fastfetch; or return
+    # fastfetch at once, then its logo keeps animating while the prompt is
+    # idle (conf.d/95-ff-logo.fish; off with `set -U fastfetch_anim 0`).
+    __ff_logo_start
 end
 
 set -gx MANROFFOPT -c
 set -gx MANPAGER "sh -c 'col -bx | bat -l man -p'"
 
-# Preferences for the package-owned `done` notification plugin.
-set -U __done_min_cmd_duration 10000
-set -U __done_notification_urgency_level low
-
-if test -f ~/.fish_profile
-    source ~/.fish_profile
-end
+# Settings for the `done` plugin (AUR: fish-done), which sends a desktop
+# notification when a command that ran 10 seconds or more finishes while the
+# terminal is in the background. Without the plugin these do nothing.
+set -g __done_min_cmd_duration 10000
+set -g __done_notification_urgency_level low
 
 # Interactive !! and !$ expansion.
 function __history_previous_command
@@ -52,8 +45,14 @@ if status is-interactive
     end
 end
 
-function history
-    builtin history --show-time='%F %T ' $argv
+# Show timestamps when listing or searching history. Other subcommands
+# (delete, merge, clear, ...) do not accept --show-time.
+function history --wraps history
+    if test (count $argv) -eq 0; or test "$argv[1]" = search; or string match --quiet -- '-*' $argv[1]
+        builtin history --show-time='%F %T ' $argv
+    else
+        builtin history $argv
+    end
 end
 
 function backup --argument-names filename
