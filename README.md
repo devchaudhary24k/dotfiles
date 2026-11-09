@@ -1,38 +1,12 @@
 # Dotfiles
 
-This repository contains reviewed user configuration. It does not track package
-lists, root-owned system files, application snapshots, credentials, histories,
-caches, or backups.
+User configuration for nukebyte, an Arch Linux laptop running KDE Plasma. It
+does not track package lists, root-owned system files, application snapshots,
+credentials, histories, caches, or backups.
 
-## Consumers
-
-Both machines run NixOS from
-[`carbon-nix`](https://github.com/devchaudhary24k/carbon-nix), which takes this
-repository as a flake input and links these paths with Home Manager:
-
-```text
-home/git/.gitconfig
-home/git/.config/git/ignore
-home/fish/.config/fish
-home/starship/.config/starship.toml
-```
-
-These paths are part of the interface to `carbon-nix`. If one moves, update
-`home/dev24k/` in `carbon-nix` to match. A change here reaches a machine after
-`nix flake update dotfiles` in `carbon-nix` and a rebuild.
-
-The packages Nix links are listed in `.nix-managed`, and `dots` leaves them
-alone. Everything else is linked with Stow by `bin/dots link`, because
-Nix-managed links are read-only. That includes the Hyprland, Waybar and UWSM
-files, so an edit under `~/.config/hypr` lands in this repo straight away and
-`hyprctl reload` picks it up:
-
-```bash
-bin/dots link hypr waybar uwsm
-```
-
-Each machine's monitor layout is `home/hypr/.config/hypr/monitors/HOSTNAME.lua`;
-`hyprland.lua` loads the one matching `/etc/hostname`.
+Every package is linked into the home directory with GNU Stow by `bin/dots`.
+The links point back into this repository, so editing `~/.config/fish/...` or
+`~/.gitconfig` edits the tracked file directly.
 
 ## Layout
 
@@ -40,7 +14,7 @@ Each machine's monitor layout is `home/hypr/.config/hypr/monitors/HOSTNAME.lua`;
 home/                 shared user configuration
 hosts/HOSTNAME/       configuration for one machine
 bin/dots              Stow helper
-docs/                  notes about selected configuration
+docs/                 notes about selected configuration
 ```
 
 A package mirrors its path below the home directory. For example:
@@ -53,8 +27,12 @@ home/alacritty/.config/alacritty/alacritty.toml
 Nukebyte's monitor layout, Plasma panel, power settings, input-device settings,
 KWin layout, and hardware-specific System Monitor pages live under
 `hosts/nukebyte/`. They are linked only when the active hostname is `nukebyte`.
-There is no `hosts/carbon/` package because Carbon's machine configuration lives
-in `carbon-nix`.
+
+The Hyprland, Waybar and UWSM packages are linked the same way, so an edit
+under `~/.config/hypr` lands in this repository and `hyprctl reload` picks it
+up. Each machine's monitor layout is
+`home/hypr/.config/hypr/monitors/HOSTNAME.lua`; `hyprland.lua` loads the one
+matching `/etc/hostname`.
 
 ## Commands
 
@@ -81,26 +59,33 @@ stores a recovery copy under
 or delete anything. Patterns in `.dots-ignore` keep known generated files out of
 its output.
 
-## Setup on nukebyte
+## Setup
 
-Clone the repository to `~/code/dotfiles` (Git and GNU Stow come with
-carbon-nix), then run:
+Install Git and Stow, clone the repository to `~/code/dotfiles`, and link the
+packages you want, previewing first:
 
 ```bash
-bin/dots dry-run
-bin/dots link
+sudo pacman -S --needed git stow
+bin/dots dry-run fish git starship alacritty
+bin/dots link fish git starship alacritty
 bin/dots doctor
 ```
 
-The `dots` command is itself managed by the `dotfiles-cli` Stow package. Fish
-completions for it are in the same package.
+The `dots` command is itself the `dotfiles-cli` package
+(`bin/dots link dotfiles-cli`), which also installs its Fish completions. It
+finds the repository by following its own link, so the clone can live anywhere.
 
 ## Selected configuration
 
 Fish defines the interactive shell, aliases, tool initialization, and a Trash
-wrapper for `rm`. Git, Alacritty, Starship, btop, Micro, SSH forwarding, and
-selected KDE settings have separate packages.
+wrapper for `rm`. Git, Ghostty, Alacritty, Starship, fastfetch, btop, Micro,
+the SSH agent (`ssh-agent`: session environment, KWallet unlock at login), SSH
+forwarding, and selected KDE settings have separate packages.
+
+Ghostty, fastfetch and btop share the Catppuccin Mocha palette. The fastfetch
+logo is generated from the company logo SVG by `assets/fastfetch/logo-anim.py`,
+which writes the still logo and the idle animation that `ff-logo` plays.
 
 KDE file ownership and the host split are documented in
-[`docs/kde.md`](docs/kde.md). Carbon's SSH forwarding fragment is documented in
+[`docs/kde.md`](docs/kde.md). The SSH forwarding fragment is documented in
 [`docs/ssh.md`](docs/ssh.md).
