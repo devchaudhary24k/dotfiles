@@ -1,0 +1,165 @@
+#!/usr/bin/env -S python3 -I -S
+"""Keep the fastfetch logo animating while the prompt sits idle.
+
+    ff-logo row         print the cursor row (fish calls this before fastfetch)
+    ff-logo play ROW    after fastfetch: if the logo printed from ROW is still in
+                        place, animate it in the background and write the
+                        process ID to $XDG_RUNTIME_DIR/ff-logo-<shell PID>.pid
+
+fish runs fastfetch itself between the two, so fastfetch sees fish as the
+shell and Ghostty as the terminal.
+
+fish (conf.d/95-ff-logo.fish) stops the animation with SIGTERM as soon as
+the screen could move under it: a command runs, a new prompt is drawn, the
+window is resized, the screen is cleared, or a completion or fzf list opens.
+On SIGTERM the still logo is put back and the process exits. It also stops by
+itself after a few minutes, when the shell that started it is gone, or when
+the terminal closes.
+
+The frames come from ~/.config/fastfetch/logo.loop (made by
+assets/fastfetch/logo-anim.py in the dotfiles); frame 0 is the still logo
+fastfetch prints, so stopping at any point leaves the normal picture.
+"""
+
+import os
+import re
+import select
+import signal
+import sys
+import termios
+import time
+import tty
+from pathlib import Path
+
+FRAMES = Path.home() / ".config/fastfetch/logo.loop"
+FPS = 12
+MAX_SECONDS = 300
+# Where fastfetch puts the logo, from logo.padding in config.jsonc.
+PAD_TOP = 5
+PAD_LEFT = 2
+
+
+def pid_file(shell_pid):
+    runtime = os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}"
+    return Path(runtime) / f"ff-logo-{shell_pid}.pid"
+
+
+def cursor_row(tty_fd):
+    """Ask the terminal for the cursor row (1-based), or None."""
+    old = termios.tcgetattr(tty_fd)
+    try:
+        tty.setcbreak(tty_fd, termios.TCSANOW)
+        new = termios.tcgetattr(tty_fd)
+        new[3] &= ~termios.ECHO
+        termios.tcsetattr(tty_fd, termios.TCSANOW, new)
+        os.write(tty_fd, b"\x1b[6n")
+        reply, deadline = b"", time.monotonic() + 0.3
+        while not reply.endswith(b"R"):
+            left = deadline - time.monotonic()
+            if left <= 0 or not select.select([tty_fd], [], [], left)[0]:
+                return None
+            reply += os.read(tty_fd, 32)
+    finally:
+        termios.tcsetattr(tty_fd, termios.TCSANOW, old)
+    match = re.search(rb"\x1b\[(\d+);(\d+)R", reply)
+    return int(match.group(1)) if match else None
+
+
+def play(tty_fd, frames, top, parent):
+    """Draw frames at row `top` until told to stop; always end on frame 0."""
+    stop = False
+
+    def on_term(*_):
+        nonlocal stop
+        stop = True
+
+    signal.signal(signal.SIGTERM, on_term)
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+    signal.signal(signal.SIGHUP, signal.SIG_DFL)
+    signal.signal(signal.SIGTTOU, signal.SIG_IGN)
+
+    # Each frame is one write: save the cursor, draw every logo row at its
+    # absolute position, restore the cursor, so typing is never disturbed.
+    def chunk(frame):
+        out = ["\x1b7"]
+        for i, line in enumerate(frame.split("\n")):
+            out.append(f"\x1b[{top + i};{PAD_LEFT + 1}H{line}")
+        out.append("\x1b8")
+        return "".join(out).encode()
+
+    chunks = [chunk(f) for f in frames]
+    drawn = 0
+    started = time.monotonic()
+    i = 0
+    while not stop:
+        if time.monotonic() - started > MAX_SECONDS:
+            break
+        try:
+            os.kill(parent, 0)
+        except ProcessLookupError:
+            return
+        nxt = i % len(chunks)
+        if chunks[nxt] != chunks[drawn]:
+            try:
+                os.write(tty_fd, chunks[nxt])
+            except OSError:
+                return  # the terminal is gone
+            drawn = nxt
+        i += 1
+        time.sleep(1 / FPS)
+    if drawn != 0:
+        try:
+            os.write(tty_fd, chunks[0])
+        except OSError:
+            pass
+
+
+def open_tty():
+    return os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
+
+
+def row():
+    """Print the cursor row, for fish to pass to `play` after fastfetch."""
+    tty_fd = open_tty()
+    start = cursor_row(tty_fd)
+    print(start if start else "")
+
+
+def start_play(start):
+    """Called right after fastfetch: animate the logo it just printed."""
+    if not FRAMES.exists() or os.environ.get("SSH_CONNECTION"):
+        return
+    tty_fd = open_tty()
+    end = cursor_row(tty_fd)
+    lines = os.get_terminal_size(tty_fd).lines
+
+    # Animate only if nothing scrolled: the output ended with room to spare
+    # for the prompt (Starship adds a blank line before it).
+    if end is None or end > lines - 3:
+        return
+    frames = FRAMES.read_text().split("\0")
+    if len(frames) < 2:
+        return
+
+    parent = os.getppid()
+    pid = os.fork()
+    if pid:
+        pid_file(parent).write_text(f"{pid}\n")
+        return
+    # Child: its own process group, so Ctrl+C at the prompt does not reach it.
+    os.setpgid(0, 0)
+    devnull = os.open(os.devnull, os.O_RDWR)
+    for fd in (0, 1, 2):
+        os.dup2(devnull, fd)
+    play(tty_fd, frames, start + PAD_TOP, parent)
+    os._exit(0)
+
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if args == ["row"]:
+        row()
+    elif len(args) == 2 and args[0] == "play" and args[1].isdigit():
+        start_play(int(args[1]))
+    else:
+        sys.exit(__doc__)
