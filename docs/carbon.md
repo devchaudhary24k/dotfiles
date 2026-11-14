@@ -385,18 +385,18 @@ change the version or set it back to `auto`.
 
 ## Reliability test
 
-`setup/carbon-soak` puts carbon under heavy load for about 7 hours 40 minutes
-and checks that it stays correct, cool and reachable. It runs as `dev24k`,
+`setup/carbon-soak` puts carbon under heavy load for just under 4 hours and
+checks that it stays correct, cool and reachable. It runs as `dev24k`,
 without sudo, inside the same memory and CPU limits the agents get, so it
 tests the safety net as well. It needs `stress-ng`, `fio` and `jq`.
 
 | Phase | Length | What it checks |
 |---|---|---|
-| CPU | 1 h 30 | every core flat out; stress-ng verifies every result |
-| RAM | 1 h 30 | 60% of RAM written and read back in many patterns |
-| SSD | 30 min | fio: a write read back and checked, then random mixed I/O; at most about 45 GB written |
-| HDD | 1 h | the same on `/srv/bulk` |
-| Mixed | 3 h | CPU, RAM, disk and short-lived processes at once; disk load goes to the HDD |
+| CPU | 45 min | every core flat out; stress-ng verifies every result |
+| RAM | 45 min | 60% of RAM written and read back in many patterns |
+| SSD | 20 min | fio: a write read back and checked, then random mixed I/O; at most about 45 GB written |
+| HDD | 30 min | the same on `/srv/bulk` |
+| Mixed | 1 h 30 | CPU, RAM, disk and short-lived processes at once; disk load goes to the HDD |
 | OOM | 5 min | a program that eats memory inside a 1 GB box must be killed, and the phone alert must arrive |
 
 A live dashboard shows the phases, CPU load, temperature and clock, memory
@@ -404,7 +404,9 @@ and swap, disk speeds, how long programs wait for CPU, memory or disk (PSI),
 how fast sshd answers, and counts of processes killed for memory and of
 kernel and disk errors. Each run writes logs, `metrics.csv` and `summary.md`
 to `~/carbon-soak/<start time>/`. `--quick` runs every phase in short form, in
-about 12 minutes. Ctrl-C stops it cleanly and still writes the summary.
+about 12 minutes. Ctrl-C stops it cleanly and still writes the summary. It
+also stops by itself if the CPU stays at 90 °C or more for a minute, or if
+sshd stops answering for about a minute.
 
 ```bash
 tmux new -s soak

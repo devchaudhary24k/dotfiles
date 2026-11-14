@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # carbon-soak: an overnight reliability test for carbon, with a live dashboard.
 #
-#   setup/carbon-soak            the full test, about 7 h 40 min
+#   setup/carbon-soak            the full test, under 4 hours (3 h 55 min)
 #   setup/carbon-soak --quick    every phase in short form, about 12 min
+#   setup/carbon-soak --dry-run  no load at all: check everything, print the plan
 #
 # Run it in tmux (tmux new -s soak), detach with Ctrl-b d, and come back with
 # tmux attach -t soak. It runs as you, without sudo, inside the same memory
@@ -20,15 +21,18 @@
 # While a phase runs it checks, every 20 s, how fast sshd answers on this
 # machine, and counts processes killed for memory and kernel errors. Logs, a
 # CSV of every measurement and summary.md go to ~/carbon-soak/<start time>/.
-# Ctrl-C stops it cleanly and still writes the summary.
+# Ctrl-C stops it cleanly and still writes the summary. It also stops by
+# itself if the CPU stays at 90 °C or more for a minute, or if sshd does not
+# answer three checks in a row (about a minute).
 # Needs: stress-ng, fio, jq (sudo pacman -S --needed stress-ng fio jq).
 set -uo pipefail
 
-QUICK=0
+QUICK=0 DRY=0
 case ${1:-} in
   --quick) QUICK=1 ;;
+  --dry-run) DRY=1 ;;
   "") ;;
-  *) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  *) sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
 esac
 
 for tool in stress-ng fio jq; do
@@ -41,7 +45,8 @@ if ((QUICK)); then
   T_CPU=60 T_RAM=60 T_SSD=180 T_HDD=180 T_MIX=120 T_OOM=60
   SSD_SEQ=1G SSD_RAND_FILE=1G SSD_RAND_IO=2G HDD_SEQ=1G HDD_RAND_FILE=1G
 else
-  T_CPU=5400 T_RAM=5400 T_SSD=1800 T_HDD=3600 T_MIX=10800 T_OOM=300
+  # 45 + 45 + 20 + 30 + 90 + 5 minutes: 3 h 55 min, never more than 4 hours.
+  T_CPU=2700 T_RAM=2700 T_SSD=1200 T_HDD=1800 T_MIX=5400 T_OOM=300
   # SSD writes: 20 GB sequential + 30% of 2 x 40 GB random = about 44 GB.
   SSD_SEQ=20G SSD_RAND_FILE=8G SSD_RAND_IO=40G HDD_SEQ=20G HDD_RAND_FILE=4G
 fi
@@ -151,6 +156,9 @@ CPU_PCT=0 LOAD=0 TEMP=0 FREQ=0 MEM_USED=0 SWAP_USED=0 ZRAM=0
 PSI_CPU=0 PSI_MEM=0 PSI_IO=0 SSD_R=0 SSD_W=0 HDD_R=0 HDD_W=0
 SSH_MS=0 KILLS=0 KERR=0 HWERR=0
 PEAK_TEMP=0 PEAK_SSH=0 PEAK_SWAP=0 PEAK_PSI_MEM=0 SSH_FAILS=0
+# Safety stop: a minute at HOT_LIMIT or above (30 samples), or sshd silent
+# for three checks in a row.
+HOT_LIMIT=90 HOT_SAMPLES=0 SSH_SILENT=0 SAFETY=""
 prev_total=0 prev_idle=0 prev_t=0
 declare -A prev_sect=()
 tick=0
@@ -210,9 +218,14 @@ sample() {
   prev_t=$now
   if ((tick % 10 == 0)); then
     SSH_MS=$(ssh_probe)
-    if ((SSH_MS < 0)); then ((SSH_FAILS++)); else PEAK_SSH=$(fmax "$SSH_MS" "$PEAK_SSH"); fi
+    if ((SSH_MS < 0)); then
+      ((SSH_FAILS++)); ((SSH_SILENT++))
+    else
+      SSH_SILENT=0 PEAK_SSH=$(fmax "$SSH_MS" "$PEAK_SSH")
+    fi
     journal_counts
   fi
+  if ((TEMP >= HOT_LIMIT)); then ((HOT_SAMPLES++)); else HOT_SAMPLES=0; fi
   PEAK_TEMP=$(fmax "$TEMP" "$PEAK_TEMP")
   PEAK_SWAP=$(fmax "$SWAP_USED" "$PEAK_SWAP")
   PEAK_PSI_MEM=$(fmax "$PSI_MEM" "$PEAK_PSI_MEM")
@@ -308,7 +321,11 @@ draw() {
 }
 
 # Running ---------------------------------------------------------------------
-CUR=0 PHASE_PID=0 PHASE_START=$START ABORTED=0
+CUR=0 PHASE_PID=0 PHASE_START=$START ABORTED=0 OVERRAN=0 LEFTOVER=0
+GRACE=$( ((QUICK)) && echo 120 || echo 300) # watchdog margin past each phase's plan
+# Job control gives every background phase its own process group, so stopping
+# a phase ends everything it started, including processes it left behind.
+set -m
 
 judge() { # judge INDEX EXIT-CODE
   local i=$1 rc=$2 log=$RUN_DIR/${IDS[$1]}.log since=$PHASE_START
@@ -331,11 +348,24 @@ judge() { # judge INDEX EXIT-CODE
   esac
 }
 
+kill_phase() { # end every process the phase started: its whole process group
+  ((PHASE_PID)) || return 0
+  kill -TERM -- "-$PHASE_PID" 2>/dev/null || return 0
+  local k
+  for k in 1 2 3 4 5 6; do
+    kill -0 -- "-$PHASE_PID" 2>/dev/null || return 0
+    sleep 0.5
+  done
+  kill -KILL -- "-$PHASE_PID" 2>/dev/null
+}
+
+leftovers() { pgrep -u "$UID" -x 'stress-ng|fio' | grep -c .; }
+
 stop_everything() {
-  ((PHASE_PID)) && pkill -TERM -P "$PHASE_PID" 2>/dev/null
-  pkill -TERM -u "$UID" -x stress-ng 2>/dev/null
-  pkill -TERM -u "$UID" -x fio 2>/dev/null
-  sleep 2
+  kill_phase
+  pkill -TERM -u "$UID" -x 'stress-ng|fio' 2>/dev/null
+  sleep 1
+  pkill -KILL -u "$UID" -x 'stress-ng|fio' 2>/dev/null
   rm -rf "$SSD_DIR" "$HDD_DIR"
 }
 
@@ -348,6 +378,7 @@ summary() {
   ((HWERR > 0 || SSH_FAILS > 0)) && verdict=FAIL
   [[ $verdict == PASS ]] && ((KERR > 0 || ${PEAK_TEMP%.*} >= 90 || ${PEAK_SSH%.*} >= 2000)) && verdict=WARN
   ((ABORTED)) && verdict="STOPPED EARLY ($verdict for the phases that finished)"
+  [[ -n $SAFETY ]] && verdict="SAFETY STOP: $SAFETY"
   {
     echo "# carbon soak test, $(date -d "@$START" '+%F %H:%M')"
     echo
@@ -362,6 +393,7 @@ summary() {
     echo "- Peak swap in use: $PEAK_SWAP GB; peak memory wait: $PEAK_PSI_MEM%"
     echo "- Processes killed for memory: $KILLS (the OOM phase causes at least one)"
     echo "- Kernel errors: $KERR; disk or hardware errors: $HWERR"
+    echo "- Test processes left running at the end: $LEFTOVER (killed if any); test files removed"
     echo
     echo "Disk results:"
     grep -hE "^(ssd|hdd)-" "$RUN_DIR"/ssd.log "$RUN_DIR"/hdd.log 2>/dev/null | sed 's/^/- /'
@@ -372,21 +404,44 @@ summary() {
 
 finish() {
   printf '%s' "${E}[?25h"
+  LEFTOVER=$(leftovers)
+  stop_everything
   summary
   printf '\n'
-  sed -E "s/\*\*PASS\*\*/$GREEN$BOLD PASS $OFF/; s/\*\*FAIL\*\*/$RED$BOLD FAIL $OFF/; s/\*\*(WARN|STOPPED[^*]*)\*\*/$YELLOW$BOLD \1 $OFF/" \
+  sed -E "s/\*\*PASS\*\*/$GREEN$BOLD PASS $OFF/; s/\*\*FAIL\*\*/$RED$BOLD FAIL $OFF/; s/\*\*(SAFETY[^*]*)\*\*/$RED$BOLD \1 $OFF/; s/\*\*(WARN|STOPPED[^*]*)\*\*/$YELLOW$BOLD \1 $OFF/" \
     "$RUN_DIR/summary.md" | sed 's/^/  /'
   printf '\n  %sSaved: %s/summary.md%s\n\n' "$GREY" "${RUN_DIR/#$HOME/\~}" "$OFF"
 }
 
 on_interrupt() {
   ABORTED=1
-  [[ ${STATE[CUR]} == run ]] && STATE[CUR]=stopped NOTES[CUR]="stopped by Ctrl-C"
+  [[ ${STATE[CUR]} == run ]] && STATE[CUR]=stopped NOTES[CUR]=$([[ -n $SAFETY ]] && echo "safety stop" || echo "stopped by Ctrl-C")
   stop_everything
   finish
   exit 130
 }
 trap on_interrupt INT TERM
+
+if ((DRY)); then
+  total=0
+  for s in "${SECS[@]}"; do total=$((total + s)); done
+  printf '\n  %s%s⚛  carbon soak test, dry run%s %s(no load is applied)%s\n\n' "$BOLD" "$TEAL" "$OFF" "$GREY" "$OFF"
+  printf '  %sCHECKS%s\n' "$MAUVE" "$OFF"
+  for tool in stress-ng fio jq tmux; do
+    command -v "$tool" >/dev/null && printf '  %s✔%s %s\n' "$GREEN" "$OFF" "$tool" || printf '  %s✘%s %s missing\n' "$RED" "$OFF" "$tool"
+  done
+  [[ -n $TEMP_FILE ]] && printf '  %s✔%s CPU sensor: %d °C now (safety stop at %d °C)\n' "$GREEN" "$OFF" $(($(<"$TEMP_FILE") / 1000)) 90 ||
+    printf '  %s✘%s no CPU temperature sensor\n' "$RED" "$OFF"
+  printf '  %s✔%s SSD %s: %s free · HDD %s: %s free\n' "$GREEN" "$OFF" "$SSD_DEV" "$(df -h --output=avail / | tail -1 | tr -d ' ')" \
+    "$HDD_DEV" "$(df -h --output=avail /srv/bulk | tail -1 | tr -d ' ')"
+  printf '  %s✔%s sshd answers in %s ms\n' "$GREEN" "$OFF" "$(ssh_probe)"
+  printf '\n  %sPLAN%s %s(full run; --quick is the same in short form)%s\n' "$MAUVE" "$OFF" "$GREY" "$OFF"
+  for i in "${!IDS[@]}"; do printf '  %-6s %-32s %s\n' "${NAMES[i]}" "${DESCS[i]}" "$(hms "${SECS[i]}")"; done
+  printf '  %-6s %-32s %s%s%s\n\n' "Total" "" "$BOLD" "$(hms "$total")" "$OFF"
+  printf '  %sEvery phase is killed if it runs %d min past its plan; nothing is left running.%s\n\n' "$GREY" $((GRACE / 60)) "$OFF"
+  rmdir "$RUN_DIR" 2>/dev/null
+  exit 0
+fi
 
 if [[ -z ${TMUX:-} ]]; then
   printf '\n  %sNot inside tmux:%s if this SSH session drops, the test stops with it.\n' "$YELLOW$BOLD" "$OFF"
@@ -398,16 +453,32 @@ printf '%s' "${E}[2J${E}[?25l"
 sample
 
 for CUR in "${!IDS[@]}"; do
-  STATE[CUR]=run PHASE_START=$(date +%s)
+  STATE[CUR]=run PHASE_START=$(date +%s) OVERRAN=0
   "phase_${IDS[CUR]}" >"$RUN_DIR/${IDS[CUR]}.log" 2>&1 &
   PHASE_PID=$!
   while kill -0 "$PHASE_PID" 2>/dev/null; do
     sample
     draw
+    if ((HOT_SAMPLES >= 30)); then
+      SAFETY="CPU at ${HOT_LIMIT} °C or more for a minute (now ${TEMP} °C)"
+    elif ((SSH_SILENT >= 3)); then
+      SAFETY="sshd did not answer for about a minute"
+    fi
+    if [[ -n $SAFETY ]]; then
+      on_interrupt
+    fi
+    # Watchdog: no phase may run long past its plan (a stuck tool or disk).
+    if (($(date +%s) - PHASE_START > SECS[CUR] + GRACE)); then
+      OVERRAN=1
+      kill_phase
+    fi
     sleep 2
   done
   wait "$PHASE_PID"
-  judge "$CUR" $?
+  rc=$?
+  kill_phase # anything the phase left behind
+  judge "$CUR" "$rc"
+  if ((OVERRAN)); then STATE[CUR]=fail NOTES[CUR]="ran $((GRACE / 60)) min over, stopped"; fi
   PHASE_PID=0
   journal_counts
   draw
