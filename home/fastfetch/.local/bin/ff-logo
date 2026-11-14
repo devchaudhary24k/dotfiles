@@ -17,7 +17,7 @@ itself after a few minutes, when the shell that started it is gone, or when
 the terminal closes.
 
 The frames come from ~/.config/fastfetch/logo.loop, this machine's own logo
-(made by assets/fastfetch/logo-anim.py or molecule-anim.py in the dotfiles);
+(made by assets/fastfetch/logo-anim.py or atom-anim.py in the dotfiles);
 frame 0 is the still logo fastfetch prints, so stopping at any point leaves
 the normal picture. It also plays over SSH.
 """

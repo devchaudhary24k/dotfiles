@@ -5,9 +5,10 @@
 // hosts/<machine>/fastfetch in the dotfiles: logo.txt (the still logo) and
 // logo.loop (the idle animation ~/.local/bin/ff-logo plays over it after
 // fastfetch has printed; fish starts it, conf.d/95-ff-logo.fish). nukebyte's
-// is the company mark (assets/fastfetch/logo-anim.py), carbon's a benzene ring
-// (assets/fastfetch/molecule-anim.py). $1..$6 in logo.txt shade it from grey
-// to white. Everything else is Catppuccin Mocha, matching Ghostty.
+// is the company mark (assets/fastfetch/logo-anim.py), carbon's a carbon atom
+// (assets/fastfetch/atom-anim.py). $1..$6 in logo.txt are greys to white; $7
+// is the teal of carbon's electrons. Everything else is Catppuccin Mocha,
+// matching Ghostty.
 {
   "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
   "logo": {
@@ -19,7 +20,8 @@
       "3": "#9399b2",
       "4": "#bac2de",
       "5": "#dfe3f2",
-      "6": "#f2f2f2"
+      "6": "#f2f2f2",
+      "7": "#94e2d5"
     },
     // ff-logo draws the animation where the logo is: keep it on the left,
     // and keep this padding in step with PAD_TOP / PAD_LEFT in ff-logo.

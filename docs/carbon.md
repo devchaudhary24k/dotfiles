@@ -291,7 +291,7 @@ The restore brought back both tools' settings, logins and history.
 
 The login shell is fish, configured by this repository like nukebyte's:
 `hosts/carbon/packages` links fish, starship, git, btop and fastfetch. The
-prompt is teal instead of red, and fastfetch shows a benzene ring instead of
+prompt is teal instead of red, and fastfetch shows a carbon atom instead of
 the company logo, so a terminal shows which machine it is on. The tools the
 fish config expects (`eza`, `bat`, `zoxide`, `trash-cli`) are installed.
 

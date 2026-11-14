@@ -66,7 +66,7 @@ of `hostnamectl hostname`.
 | | nukebyte | carbon |
 |---|---|---|
 | Packages | see `hosts/nukebyte/packages` | fish, starship, git, btop, fastfetch |
-| fastfetch logo | the company logo | a benzene ring |
+| fastfetch logo | the company logo | a carbon atom |
 | Prompt colours | reds | teals |
 
 The prompt and logo differ so a terminal shows which machine it is on.
@@ -87,7 +87,7 @@ Ghostty, fastfetch and btop share the Catppuccin Mocha palette. fastfetch runs
 when a terminal opens and when you type `fastfetch` (or `ff`); its logo then
 animates until the screen could move. `ff-logo` plays the animation. The
 logos come from generators in `assets/fastfetch/`: `logo-anim.py` draws
-nukebyte's from the company logo SVG, and `molecule-anim.py` draws carbon's.
+nukebyte's from the company logo SVG, and `atom-anim.py` draws carbon's.
 
 Each machine's Hyprland monitor layout is
 `home/hypr/.config/hypr/monitors/HOSTNAME.lua`; `hyprland.lua` loads the one
