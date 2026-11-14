@@ -1,0 +1,416 @@
+#!/usr/bin/env bash
+# carbon-soak: an overnight reliability test for carbon, with a live dashboard.
+#
+#   setup/carbon-soak            the full test, about 7 h 40 min
+#   setup/carbon-soak --quick    every phase in short form, about 12 min
+#
+# Run it in tmux (tmux new -s soak), detach with Ctrl-b d, and come back with
+# tmux attach -t soak. It runs as you, without sudo, inside the same memory
+# and CPU limits the agents get, so it tests the machine and its safety net:
+#
+#   1 CPU     all cores flat out, every result checked (stress-ng --verify)
+#   2 RAM     60% of RAM written and read back in many patterns, checked
+#   3 SSD     fio: a sequential write read back and checked, then random
+#             mixed I/O; at most about 45 GB written, to spare the SSD
+#   4 HDD     the same on /srv/bulk, without a write limit
+#   5 Mixed   CPU, RAM, disk and thousands of short-lived processes at once
+#   6 OOM     a program that eats memory inside a 1 GB box: the kernel must
+#             kill it, nothing else, and the phone alert must arrive
+#
+# While a phase runs it checks, every 20 s, how fast sshd answers on this
+# machine, and counts processes killed for memory and kernel errors. Logs, a
+# CSV of every measurement and summary.md go to ~/carbon-soak/<start time>/.
+# Ctrl-C stops it cleanly and still writes the summary.
+# Needs: stress-ng, fio, jq (sudo pacman -S --needed stress-ng fio jq).
+set -uo pipefail
+
+QUICK=0
+case ${1:-} in
+  --quick) QUICK=1 ;;
+  "") ;;
+  *) sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+
+for tool in stress-ng fio jq; do
+  command -v "$tool" >/dev/null || { echo "carbon-soak: $tool is missing (sudo pacman -S --needed stress-ng fio jq)"; exit 1; }
+done
+
+# Sizes and times ---------------------------------------------------------------
+mem_kb=$(awk '/^MemTotal/ {print $2}' /proc/meminfo)
+if ((QUICK)); then
+  T_CPU=60 T_RAM=60 T_SSD=180 T_HDD=180 T_MIX=120 T_OOM=60
+  SSD_SEQ=1G SSD_RAND_FILE=1G SSD_RAND_IO=2G HDD_SEQ=1G HDD_RAND_FILE=1G
+else
+  T_CPU=5400 T_RAM=5400 T_SSD=1800 T_HDD=3600 T_MIX=10800 T_OOM=300
+  # SSD writes: 20 GB sequential + 30% of 2 x 40 GB random = about 44 GB.
+  SSD_SEQ=20G SSD_RAND_FILE=8G SSD_RAND_IO=40G HDD_SEQ=20G HDD_RAND_FILE=4G
+fi
+RAM_EACH_MB=$((mem_kb * 60 / 100 / 4 / 1024)) # 4 workers, 60% of RAM together
+MIX_EACH_MB=$((mem_kb * 20 / 100 / 1024))     # 2 workers, 40% together
+
+RUN_DIR=$HOME/carbon-soak/$(date +%Y-%m-%d_%H%M)
+SSD_DIR=$HOME/.cache/carbon-soak
+HDD_DIR=/srv/bulk/datasets/carbon-soak
+mkdir -p "$RUN_DIR"
+
+SSD_DEV=$(lsblk -no PKNAME "$(findmnt -no SOURCE /)")
+HDD_DEV=$(lsblk -no PKNAME "$(findmnt -no SOURCE /srv/bulk)")
+TEMP_FILE=""
+for hw in /sys/class/hwmon/hwmon*; do
+  [[ $(<"$hw/name") == k10temp ]] && TEMP_FILE=$hw/temp1_input
+done
+
+# Phases ------------------------------------------------------------------------
+IDS=(cpu ram ssd hdd mixed oom)
+NAMES=(CPU RAM SSD HDD Mixed OOM)
+DESCS=(
+  "all cores, results checked"
+  "$((RAM_EACH_MB * 4 / 1024)) GB written and checked"
+  "fio, write cap ~$((${SSD_SEQ%G} + ${SSD_RAND_IO%G} * 2 * 3 / 10)) GB"
+  "fio on /srv/bulk"
+  "CPU + RAM + disk + forks"
+  "1 GB box, kernel must kill"
+)
+SECS=("$T_CPU" "$T_RAM" "$T_SSD" "$T_HDD" "$T_MIX" "$T_OOM")
+STATE=(wait wait wait wait wait wait)
+NOTES=("" "" "" "" "" "")
+
+fio_run() { # fio_run NAME fio-options... ; prints a one-line result
+  local name=$1 json=$RUN_DIR/$1.json
+  shift
+  fio --name="$name" "$@" --output-format=json --output="$json"
+  local rc=$?
+  jq -r --arg n "$name" '.jobs[0] as $j |
+    "\($n): read \($j.read.bw_bytes / 1e6 | floor) MB/s, write \($j.write.bw_bytes / 1e6 | floor) MB/s, " +
+    "p99 latency read \(($j.read.clat_ns.percentile."99.000000" // 0) / 1e6 * 10 | floor / 10) ms " +
+    "write \(($j.write.clat_ns.percentile."99.000000" // 0) / 1e6 * 10 | floor / 10) ms, errors \($j.error)"' \
+    "$json" 2>/dev/null || echo "$name: no result (fio exit $rc)"
+  return "$rc"
+}
+
+phase_cpu() {
+  stress-ng --cpu 0 --cpu-method all --verify --timeout "${T_CPU}s" --metrics-brief
+}
+
+phase_ram() {
+  stress-ng --vm 4 --vm-bytes "${RAM_EACH_MB}M" --vm-method all --verify \
+    --timeout "${T_RAM}s" --metrics-brief
+}
+
+phase_ssd() {
+  local rc=0 start=$SECONDS left
+  mkdir -p "$SSD_DIR"
+  fio_run ssd-sequential --directory="$SSD_DIR" --filename=seq.dat --rw=write --bs=1M \
+    --size="$SSD_SEQ" --direct=1 --ioengine=io_uring --iodepth=16 \
+    --verify=crc32c --verify_fatal=1 --runtime=$((T_SSD / 2)) || rc=1
+  rm -f "$SSD_DIR/seq.dat"
+  left=$((T_SSD - (SECONDS - start))); ((left < 30)) && left=30
+  fio_run ssd-random --directory="$SSD_DIR" --filename=rand.dat --size="$SSD_RAND_FILE" \
+    --io_size="$SSD_RAND_IO" --rw=randrw --rwmixread=70 --bs=4k --direct=1 \
+    --ioengine=io_uring --iodepth=32 --numjobs=2 --group_reporting --runtime="$left" || rc=1
+  rm -rf "$SSD_DIR"
+  return "$rc"
+}
+
+phase_hdd() {
+  local rc=0 start=$SECONDS left
+  mkdir -p "$HDD_DIR"
+  fio_run hdd-sequential --directory="$HDD_DIR" --filename=seq.dat --rw=write --bs=1M \
+    --size="$HDD_SEQ" --direct=1 --ioengine=io_uring --iodepth=16 \
+    --verify=crc32c --verify_fatal=1 --runtime=$((T_HDD / 2)) || rc=1
+  rm -f "$HDD_DIR/seq.dat"
+  left=$((T_HDD - (SECONDS - start))); ((left < 30)) && left=30
+  fio_run hdd-random --directory="$HDD_DIR" --filename=rand.dat --size="$HDD_RAND_FILE" \
+    --rw=randrw --rwmixread=70 --bs=4k --direct=1 --ioengine=io_uring --iodepth=16 \
+    --time_based --runtime="$left" || rc=1
+  rm -rf "$HDD_DIR"
+  return "$rc"
+}
+
+phase_mixed() {
+  local rc=0
+  mkdir -p "$HDD_DIR"
+  # Disk stressors write to the HDD, so hours of this do not wear the SSD.
+  stress-ng --cpu 4 --cpu-load 85 --vm 2 --vm-bytes "${MIX_EACH_MB}M" --verify \
+    --fork 2 --hdd 1 --hdd-bytes 2G --iomix 1 --temp-path "$HDD_DIR" \
+    --timeout "${T_MIX}s" --metrics-brief || rc=$?
+  rm -rf "$HDD_DIR"
+  return "$rc"
+}
+
+phase_oom() {
+  # A 1 GB box without swap; the program inside asks for 2 GB.
+  systemd-run --user --scope --quiet -p MemoryMax=1G -p MemorySwapMax=0 -- \
+    stress-ng --vm 1 --vm-bytes 2G --vm-keep --oomable --timeout "${T_OOM}s" --metrics-brief
+  return 0 # judged from the kernel log, not the exit code
+}
+
+# Measurements ------------------------------------------------------------------
+START=$(date +%s)
+CPU_PCT=0 LOAD=0 TEMP=0 FREQ=0 MEM_USED=0 SWAP_USED=0 ZRAM=0
+PSI_CPU=0 PSI_MEM=0 PSI_IO=0 SSD_R=0 SSD_W=0 HDD_R=0 HDD_W=0
+SSH_MS=0 KILLS=0 KERR=0 HWERR=0
+PEAK_TEMP=0 PEAK_SSH=0 PEAK_SWAP=0 PEAK_PSI_MEM=0 SSH_FAILS=0
+prev_total=0 prev_idle=0 prev_t=0
+declare -A prev_sect=()
+tick=0
+
+disk_sectors() { awk -v d="$1" '$3 == d {print $6, $10}' /proc/diskstats; }
+psi() { awk '/^some/ {sub("avg10=", "", $2); print int($2 + 0.5)}' "/proc/pressure/$1"; }
+fmax() { awk -v a="$1" -v b="$2" 'BEGIN {print (a + 0 > b + 0) ? a : b}'; }
+
+ssh_probe() { # milliseconds until sshd here sends its banner, -1 if it does not
+  local t0 t1
+  t0=$(date +%s%N)
+  if timeout 5 bash -c 'exec 3<>/dev/tcp/127.0.0.1/22 && head -c 4 <&3' >/dev/null 2>&1; then
+    t1=$(date +%s%N)
+    echo $(((t1 - t0) / 1000000))
+  else
+    echo -1
+  fi
+}
+
+journal_counts() {
+  local since="@$START"
+  KILLS=$(journalctl -q --since "$since" -o cat _TRANSPORT=kernel + _SYSTEMD_UNIT=earlyoom.service 2>/dev/null |
+    grep -cE "Killed process|sending SIG")
+  KERR=$(journalctl -q -k -p err --since "$since" -o cat 2>/dev/null |
+    grep -viE "oom|out of memory|killed process|memory cgroup" | grep -c .)
+  HWERR=$(journalctl -q -k --since "$since" -o cat 2>/dev/null |
+    grep -ciE "i/o error|ext4-fs error|machine check|hardware error|ata[0-9.]+: .*(failed|error)")
+}
+
+sample() {
+  local u n s i w q sq st total idle now dt r wr dev
+  read -r _ u n s i w q sq st _ </proc/stat
+  total=$((u + n + s + i + w + q + sq + st)) idle=$((i + w))
+  if ((prev_total)); then
+    CPU_PCT=$(((total - prev_total - (idle - prev_idle)) * 100 / (total - prev_total + 1)))
+  fi
+  prev_total=$total prev_idle=$idle
+  LOAD=$(cut -d' ' -f1 /proc/loadavg)
+  [[ -n $TEMP_FILE ]] && TEMP=$(($(<"$TEMP_FILE") / 1000))
+  FREQ=$(awk '{s += $1; n++} END {printf "%.1f", s / n / 1e6}' /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq)
+  read -r MEM_USED SWAP_USED < <(awk '/^MemTotal/ {t = $2} /^MemAvailable/ {a = $2}
+    /^SwapTotal/ {st = $2} /^SwapFree/ {sf = $2} END {printf "%.1f %.1f", (t - a) / 1048576, (st - sf) / 1048576}' /proc/meminfo)
+  ZRAM=$(awk '{printf "%.1f", $1 / 1073741824}' /sys/block/zram0/mm_stat 2>/dev/null || echo 0)
+  PSI_CPU=$(psi cpu) PSI_MEM=$(psi memory) PSI_IO=$(psi io)
+  now=$(date +%s%N)
+  dt=$(((now - prev_t) / 1000000)); ((dt < 1)) && dt=1
+  for dev in "$SSD_DEV" "$HDD_DEV"; do
+    read -r r wr < <(disk_sectors "$dev")
+    if [[ -n ${prev_sect[$dev]:-} ]]; then
+      read -r pr pw <<<"${prev_sect[$dev]}"
+      # sectors are 512 bytes: MB/s = sectors * 512 / 1e6 / (dt / 1000)
+      local rm=$(((r - pr) * 512 / 1000 / dt)) wm=$(((wr - pw) * 512 / 1000 / dt))
+      if [[ $dev == "$SSD_DEV" ]]; then SSD_R=$rm SSD_W=$wm; else HDD_R=$rm HDD_W=$wm; fi
+    fi
+    prev_sect[$dev]="$r $wr"
+  done
+  prev_t=$now
+  if ((tick % 10 == 0)); then
+    SSH_MS=$(ssh_probe)
+    if ((SSH_MS < 0)); then ((SSH_FAILS++)); else PEAK_SSH=$(fmax "$SSH_MS" "$PEAK_SSH"); fi
+    journal_counts
+  fi
+  PEAK_TEMP=$(fmax "$TEMP" "$PEAK_TEMP")
+  PEAK_SWAP=$(fmax "$SWAP_USED" "$PEAK_SWAP")
+  PEAK_PSI_MEM=$(fmax "$PSI_MEM" "$PEAK_PSI_MEM")
+  if ((tick % 5 == 0)); then
+    echo "$(date +%T),${IDS[CUR]},$CPU_PCT,$LOAD,$TEMP,$FREQ,$MEM_USED,$SWAP_USED,$PSI_CPU,$PSI_MEM,$PSI_IO,$SSD_R,$SSD_W,$HDD_R,$HDD_W,$SSH_MS" >>"$RUN_DIR/metrics.csv"
+  fi
+  ((tick++))
+}
+
+# Dashboard ---------------------------------------------------------------------
+E=$'\e'
+TEAL="${E}[38;2;148;226;213m" MAUVE="${E}[38;2;203;166;247m" GREEN="${E}[38;2;166;227;161m"
+RED="${E}[38;2;243;139;168m" YELLOW="${E}[38;2;249;226;175m" GREY="${E}[38;2;127;132;156m"
+TEXT="${E}[38;2;205;214;244m" BOLD="${E}[1m" OFF="${E}[0m"
+
+bar() { # bar PERCENT WIDTH COLOUR
+  local pct=$1 width=$2 colour=$3 eighths full part out="" k
+  ((pct > 100)) && pct=100
+  ((pct < 0)) && pct=0
+  eighths=$((pct * width * 8 / 100)) full=$((eighths / 8)) part=$((eighths % 8))
+  local parts=("" "▏" "▎" "▍" "▌" "▋" "▊" "▉")
+  for ((k = 0; k < full; k++)); do out+="█"; done
+  out+=${parts[part]}
+  local used=$((full + (part > 0)))
+  printf '%s%s%s%*s' "$colour" "$out" "$GREY" $((width - used)) "" | sed "s/ /·/g"
+  printf '%s' "$OFF"
+}
+
+hms() { printf '%d:%02d:%02d' $(($1 / 3600)) $(($1 % 3600 / 60)) $(($1 % 60)); }
+
+level() { # level VALUE WARN BAD -> colour
+  if (($1 >= $3)); then printf '%s' "$RED"; elif (($1 >= $2)); then printf '%s' "$YELLOW"; else printf '%s' "$GREEN"; fi
+}
+
+draw() {
+  local now total_secs elapsed i mark colour line pct left
+  now=$(date +%s) elapsed=$((now - START))
+  total_secs=0
+  for s in "${SECS[@]}"; do total_secs=$((total_secs + s)); done
+  {
+    printf '%s\n' "${E}[H"
+    printf '  %s%s⚛  carbon soak test%s%s   %s · started %s · elapsed %s%s%s\n' \
+      "$BOLD" "$TEAL" "$OFF" "$GREY" "$( ((QUICK)) && echo quick || echo full)" \
+      "$(date -d "@$START" +%H:%M)" "$TEXT" "$(hms "$elapsed")" "$OFF"
+    printf '  %s\n\n' "$(bar $((elapsed * 100 / total_secs)) 62 "$TEAL")"
+    printf '  %sPHASES%s\n' "$MAUVE" "$OFF"
+    for i in "${!IDS[@]}"; do
+      case ${STATE[i]} in
+        pass) mark="✔" colour=$GREEN ;;
+        fail) mark="✘" colour=$RED ;;
+        warn) mark="!" colour=$YELLOW ;;
+        run) mark="▶" colour=$TEAL ;;
+        stopped) mark="■" colour=$YELLOW ;;
+        *) mark="·" colour=$GREY ;;
+      esac
+      line=$(printf '%s %-6s %-30s' "$mark" "${NAMES[i]}" "${DESCS[i]}")
+      if [[ ${STATE[i]} == run ]]; then
+        pct=$(((now - PHASE_START) * 100 / SECS[i])) left=$((SECS[i] - (now - PHASE_START)))
+        ((left < 0)) && left=0
+        printf '  %s%s%s %s %s%s left%s\n' "$colour$BOLD" "$line" "$OFF" "$(bar "$pct" 16 "$TEAL")" "$GREY" "$(hms "$left")" "$OFF"
+      else
+        printf '  %s%s%s %s%s%s\n' "$colour" "$line" "$OFF" "$GREY" "${NOTES[i]:0:30}" "$OFF"
+      fi
+    done
+    printf '\n  %sLIVE%s\n' "$MAUVE" "$OFF"
+    printf '  %sCPU %s %s %s%3d%%%s  load %s  %s GHz  %s%d°C%s %s(peak %d°C)%s\n' "$TEXT" "$OFF" \
+      "$(bar "$CPU_PCT" 22 "$TEAL")" "$TEXT" "$CPU_PCT" "$OFF" "$LOAD" "$FREQ" \
+      "$(level "$TEMP" 80 90)" "$TEMP" "$OFF" "$GREY" "${PEAK_TEMP%.*}" "$OFF"
+    local mem_pct
+    mem_pct=$(awk -v u="$MEM_USED" -v t="$mem_kb" 'BEGIN {print int(u * 1048576 / t * 100)}')
+    printf '  %sRAM %s %s%s %s / %d GB%s  swap %s GB  zram %s GB\n' "$TEXT" "$OFF" \
+      "$(bar "$mem_pct" 22 "$TEAL")" "$TEXT" "$MEM_USED" $((mem_kb / 1048576)) "$OFF" "$SWAP_USED" "$ZRAM"
+    printf '  %sDisk%s SSD read %s%4d%s write %s%4d%s MB/s   HDD read %s%4d%s write %s%4d%s MB/s\n' \
+      "$TEXT" "$OFF" "$TEXT" "$SSD_R" "$OFF" "$TEXT" "$SSD_W" "$OFF" "$TEXT" "$HDD_R" "$OFF" "$TEXT" "$HDD_W" "$OFF"
+    printf '  %sWait%s cpu %s%2d%%%s  memory %s%2d%%%s  disk %s%2d%%%s   %s(share of time programs wait)%s\n' \
+      "$TEXT" "$OFF" "$(level "$PSI_CPU" 50 90)" "$PSI_CPU" "$OFF" "$(level "$PSI_MEM" 10 40)" "$PSI_MEM" "$OFF" \
+      "$(level "$PSI_IO" 40 80)" "$PSI_IO" "$OFF" "$GREY" "$OFF"
+    if ((SSH_MS < 0)); then
+      printf '  %sSSH %s %sno answer within 5 s%s  (%d times)\n' "$TEXT" "$OFF" "$RED$BOLD" "$OFF" "$SSH_FAILS"
+    else
+      printf '  %sSSH %s answers in %s%d ms%s  %s(slowest %d ms, no answer %d times)%s\n' "$TEXT" "$OFF" \
+        "$(level "$SSH_MS" 500 2000)" "$SSH_MS" "$OFF" "$GREY" "${PEAK_SSH%.*}" "$SSH_FAILS" "$OFF"
+    fi
+    printf '  %sKill%s %s%d%s killed for memory   kernel errors %s%d%s   disk/hardware errors %s%d%s\n' \
+      "$TEXT" "$OFF" "$(level "$KILLS" 1 99)" "$KILLS" "$OFF" "$(level "$KERR" 1 1)" "$KERR" "$OFF" \
+      "$(level "$HWERR" 1 1)" "$HWERR" "$OFF"
+    printf '\n  %s%s OUTPUT%s\n' "$MAUVE" "${NAMES[CUR]^^}" "$OFF"
+    tail -n 5 "$RUN_DIR/${IDS[CUR]}.log" 2>/dev/null | tr -d '\r' | sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g' |
+      cut -c1-76 | sed "s/^/  $GREY/; s/\$/$OFF/"
+    printf '\n  %sCtrl-C stops cleanly · logs: %s%s\n' "$GREY" "${RUN_DIR/#$HOME/\~}" "$OFF"
+  } | sed "s/\$/${E}[K/"
+  printf '%s' "${E}[J"
+}
+
+# Running ---------------------------------------------------------------------
+CUR=0 PHASE_PID=0 PHASE_START=$START ABORTED=0
+
+judge() { # judge INDEX EXIT-CODE
+  local i=$1 rc=$2 log=$RUN_DIR/${IDS[$1]}.log since=$PHASE_START
+  case ${IDS[i]} in
+    ssd | hdd)
+      if ((rc == 0)); then STATE[i]=pass; else STATE[i]=fail; fi
+      NOTES[i]=$(grep -E "^(ssd|hdd)-sequential:" "$log" | sed -E 's/.*write ([0-9]+) MB\/s.*/write \1 MB\/s/')
+      ;;
+    oom)
+      if journalctl -q -k --since "@$since" -o cat | grep -q "Memory cgroup out of memory"; then
+        STATE[i]=pass NOTES[i]="killed in its box; check phone"
+      else
+        STATE[i]=warn NOTES[i]="no kill seen; alert untested"
+      fi
+      ;;
+    *)
+      if ((rc == 0)); then STATE[i]=pass NOTES[i]="no errors"; else STATE[i]=fail NOTES[i]="stress-ng exit $rc"; fi
+      grep -qiE "verif.*fail|fail.*verif" "$log" && STATE[i]=fail NOTES[i]="wrong results"
+      ;;
+  esac
+}
+
+stop_everything() {
+  ((PHASE_PID)) && pkill -TERM -P "$PHASE_PID" 2>/dev/null
+  pkill -TERM -u "$UID" -x stress-ng 2>/dev/null
+  pkill -TERM -u "$UID" -x fio 2>/dev/null
+  sleep 2
+  rm -rf "$SSD_DIR" "$HDD_DIR"
+}
+
+summary() {
+  local verdict=PASS i
+  for i in "${!IDS[@]}"; do
+    [[ ${STATE[i]} == fail ]] && verdict=FAIL
+    [[ ${STATE[i]} == warn && $verdict == PASS ]] && verdict=WARN
+  done
+  ((HWERR > 0 || SSH_FAILS > 0)) && verdict=FAIL
+  [[ $verdict == PASS ]] && ((KERR > 0 || ${PEAK_TEMP%.*} >= 90 || ${PEAK_SSH%.*} >= 2000)) && verdict=WARN
+  ((ABORTED)) && verdict="STOPPED EARLY ($verdict for the phases that finished)"
+  {
+    echo "# carbon soak test, $(date -d "@$START" '+%F %H:%M')"
+    echo
+    echo "Verdict: **$verdict** ($( ((QUICK)) && echo quick || echo full) run, $(hms $(($(date +%s) - START))))"
+    echo
+    echo "| Phase | Result | Note |"
+    echo "|---|---|---|"
+    for i in "${!IDS[@]}"; do echo "| ${NAMES[i]} | ${STATE[i]} | ${NOTES[i]} |"; done
+    echo
+    echo "- Peak CPU temperature: ${PEAK_TEMP%.*} °C (Ryzen 5 3500 throttles at 95 °C)"
+    echo "- SSH: slowest answer ${PEAK_SSH%.*} ms, no answer $SSH_FAILS times"
+    echo "- Peak swap in use: $PEAK_SWAP GB; peak memory wait: $PEAK_PSI_MEM%"
+    echo "- Processes killed for memory: $KILLS (the OOM phase causes at least one)"
+    echo "- Kernel errors: $KERR; disk or hardware errors: $HWERR"
+    echo
+    echo "Disk results:"
+    grep -hE "^(ssd|hdd)-" "$RUN_DIR"/ssd.log "$RUN_DIR"/hdd.log 2>/dev/null | sed 's/^/- /'
+    echo
+    echo "Logs and metrics.csv are in this folder. Look closer with: journalctl -k --since '$(date -d "@$START" '+%F %T')' -p warning"
+  } >"$RUN_DIR/summary.md"
+}
+
+finish() {
+  printf '%s' "${E}[?25h"
+  summary
+  printf '\n'
+  sed -E "s/\*\*PASS\*\*/$GREEN$BOLD PASS $OFF/; s/\*\*FAIL\*\*/$RED$BOLD FAIL $OFF/; s/\*\*(WARN|STOPPED[^*]*)\*\*/$YELLOW$BOLD \1 $OFF/" \
+    "$RUN_DIR/summary.md" | sed 's/^/  /'
+  printf '\n  %sSaved: %s/summary.md%s\n\n' "$GREY" "${RUN_DIR/#$HOME/\~}" "$OFF"
+}
+
+on_interrupt() {
+  ABORTED=1
+  [[ ${STATE[CUR]} == run ]] && STATE[CUR]=stopped NOTES[CUR]="stopped by Ctrl-C"
+  stop_everything
+  finish
+  exit 130
+}
+trap on_interrupt INT TERM
+
+if [[ -z ${TMUX:-} ]]; then
+  printf '\n  %sNot inside tmux:%s if this SSH session drops, the test stops with it.\n' "$YELLOW$BOLD" "$OFF"
+  printf '  Better: %stmux new -s soak%s, run it there, detach with Ctrl-b d.\n' "$TEAL" "$OFF"
+  read -rp "  Enter runs it here anyway, Ctrl-C stops: " _
+fi
+echo "time,phase,cpu_pct,load,temp_c,freq_ghz,mem_used_gb,swap_used_gb,wait_cpu,wait_mem,wait_io,ssd_read_mbs,ssd_write_mbs,hdd_read_mbs,hdd_write_mbs,ssh_ms" >"$RUN_DIR/metrics.csv"
+printf '%s' "${E}[2J${E}[?25l"
+sample
+
+for CUR in "${!IDS[@]}"; do
+  STATE[CUR]=run PHASE_START=$(date +%s)
+  "phase_${IDS[CUR]}" >"$RUN_DIR/${IDS[CUR]}.log" 2>&1 &
+  PHASE_PID=$!
+  while kill -0 "$PHASE_PID" 2>/dev/null; do
+    sample
+    draw
+    sleep 2
+  done
+  wait "$PHASE_PID"
+  judge "$CUR" $?
+  PHASE_PID=0
+  journal_counts
+  draw
+done
+
+finish
