@@ -287,15 +287,20 @@ build cache unused for a week, every week. It never touches volumes.
 
 The restore brought back both tools' settings, logins and history.
 
-### Shell and PATH
+### Shell
 
-Until the dotfiles are linked, two small changes make the user-level tools
-work:
+The login shell is fish, configured by this repository like nukebyte's:
+`hosts/carbon/packages` links fish, starship, git, btop and fastfetch. The
+prompt is teal instead of red, and fastfetch shows a benzene ring instead of
+the company logo, so a terminal shows which machine it is on. The tools the
+fish config expects (`eza`, `bat`, `zoxide`, `trash-cli`) are installed.
 
-- `~/.bashrc` puts `~/.local/bin` on PATH (before the interactive check, so
-  `ssh carbon <command>` finds it too) and runs `fnm env --use-on-cd`.
-- `~/.config/environment.d/10-carbon-path.conf` puts `~/.local/bin` on PATH for
-  user services, so T3 Code and the agents it starts find `claude`.
+Bash is still installed, and scripts that start with `#!/usr/bin/env bash` use
+it. `~/.bashrc` is Arch's default.
+
+`~/.config/environment.d/10-carbon-path.conf` puts `~/.local/bin` on PATH for
+user services, so T3 Code and the agents it starts find `claude`. It is not
+part of the dotfiles.
 
 ## GitHub
 
@@ -314,8 +319,8 @@ off at once.
 - Commits are signed with the same key. `~/.config/git/local.gitconfig` holds
   carbon's signing settings and is not in the dotfiles. Carbon's public key is
   in `home/git/.config/git/allowed_signers`, next to nukebyte's.
-- Until the dotfiles are linked, a temporary `~/.gitconfig` sets the name and
-  email and includes `local.gitconfig`. Stow replaces it.
+- The name and email come from the dotfiles' `.gitconfig`, which includes
+  `local.gitconfig`.
 
 ## T3 Code
 
@@ -462,11 +467,5 @@ Files left on carbon from the rebuild:
 
 ## Still to do
 
-- **The dotfiles.** Restructure this repository on nukebyte, then link
-  carbon's packages. The agreed plan: one shared `home/` tree, a package list
-  per host (`hosts/<host>/packages`), a short Stow install script in place of
-  `bin/dots`, and the `dotfiles-cli` package dropped. Carbon no longer runs
-  NixOS, so the four paths carbon-nix used to read from this repository can
-  move freely. After linking, remove the temporary PATH and fnm lines from
-  `~/.bashrc`, and the git name and email if they were set by hand.
+
 - **Pair T3 Code** with `t3 pair --tailscale`.
