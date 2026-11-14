@@ -14,6 +14,7 @@ The links point back into this repository, so editing `~/.config/fish/...` or
 home/                 shared user configuration
 hosts/HOSTNAME/       configuration for one machine
 bin/dots              Stow helper
+setup/                one-time system setup scripts for a machine (run as root)
 docs/                 notes about selected configuration
 ```
 
@@ -88,4 +89,5 @@ which writes the still logo and the idle animation that `ff-logo` plays.
 
 KDE file ownership and the host split are documented in
 [`docs/kde.md`](docs/kde.md). The SSH forwarding fragment is documented in
-[`docs/ssh.md`](docs/ssh.md).
+[`docs/ssh.md`](docs/ssh.md). Carbon's system setup (`setup/carbon.sh` and
+`setup/carbon-dev.sh`) is documented in [`docs/carbon.md`](docs/carbon.md).

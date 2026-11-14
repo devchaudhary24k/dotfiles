@@ -1,0 +1,348 @@
+#!/usr/bin/env bash
+# mcc: run and talk to the Minecraft Console Client bots on carbon.
+# Ported from carbon-nix modules/services/mcc.nix. The services are
+# mcc-<account>.service (installed by setup/carbon-dev.sh, which also
+# installs this file as /usr/local/bin/mcc); a polkit rule lets
+# dev24k start and stop them without sudo.
+set -euo pipefail
+
+# Account and MCP port, in account-name order (ports 33331 upwards).
+PORT_TABLE='dev24k 33331
+devchaudhary24k 33332
+hammersamster 33333
+kartik 33334'
+
+accounts() { printf '%s\n' "$PORT_TABLE" | awk '{ print $1 }'; }
+
+port_of() {
+  printf '%s\n' "$PORT_TABLE" \
+    | awk -v want="$1" '$1 == want { print $2; found = 1 } END { exit !found }'
+}
+
+known() { accounts | grep -qxF "$1"; }
+
+export SCREENDIR=/run/mcc
+
+# True when that bot has a live console to attach to. The service can be
+# active for a moment before screen has created its socket, so check both.
+# compgen is not available in the bash writeShellApplication runs, so
+# test the glob directly. An unmatched glob stays literal and fails -S.
+console_ready() {
+  systemctl is-active --quiet "mcc-$1.service" || return 1
+  local socket
+  for socket in "$SCREENDIR"/*."mcc-$1"; do
+    [[ -S "$socket" ]] && return 0
+  done
+  return 1
+}
+
+# "all" expands to every account; anything else must be a real one.
+resolve() {
+  if [[ "$1" == all ]]; then
+    accounts
+  elif known "$1"; then
+    printf '%s\n' "$1"
+  else
+    echo "Unknown account: $1" >&2
+    echo "Known: $(accounts | tr '\n' ' ')" >&2
+    return 1
+  fi
+}
+
+# MCC speaks the streamable HTTP transport, which refuses any call that is
+# not preceded by initialize and does not carry the session id returned in
+# a header. Responses come back as server-sent events.
+mcp_rpc() {
+  local account="$1" method="$2" params="${3:-{\}}" port url headers session
+  port=$(port_of "$account")
+  url="http://127.0.0.1:$port/mcp"
+  headers=$(mktemp)
+  trap 'rm -f "$headers"' RETURN
+
+  if ! curl --silent --show-error --fail --max-time 10 --dump-header "$headers" \
+         --header 'Content-Type: application/json' \
+         --header 'Accept: application/json, text/event-stream' \
+         --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"mcc","version":"1"}}}' \
+         "$url" >/dev/null; then
+    {
+      echo "No MCP server answering on $url."
+      echo "MCC only runs it while the bot is in game, and it does not come"
+      echo "back after an AutoRelog. Try: mcc restart $account"
+    } >&2
+    return 1
+  fi
+
+  session=$(grep -i '^mcp-session-id:' "$headers" | tr -d '\r' | awk '{ print $2 }')
+
+  curl --silent --max-time 10 \
+    --header 'Content-Type: application/json' \
+    --header 'Accept: application/json, text/event-stream' \
+    --header "Mcp-Session-Id: $session" \
+    --data '{"jsonrpc":"2.0","method":"notifications/initialized"}' "$url" >/dev/null
+
+  curl --silent --show-error --fail-with-body --max-time 20 \
+    --header 'Content-Type: application/json' \
+    --header 'Accept: application/json, text/event-stream' \
+    --header "Mcp-Session-Id: $session" \
+    --data "$(jq --null-input --arg m "$method" --argjson p "$params" \
+                '{jsonrpc: "2.0", id: 2, method: $m, params: $p}')" \
+    "$url" | sed -n 's/^data: //p'
+}
+
+# tools/call, unwrapped to the text the tool returned.
+mcp_tool() {
+  local account="$1" tool="$2" args="${3:-{\}}"
+  mcp_rpc "$account" tools/call \
+    "$(jq --null-input --arg n "$tool" --argjson a "$args" \
+         '{name: $n, arguments: $a}')" \
+    | jq --raw-output '
+        if .error then "error: " + (.error.message // (.error | tostring))
+        elif .result.content then (.result.content[]? | .text // tostring)
+        else ((.result // .) | tostring) end'
+}
+
+status_table() {
+  printf '%-20s %-10s %-12s %-7s %s\n' ACCOUNT STATE UPTIME MCP LISTENING
+  local account state since uptime port listening
+  while read -r account; do
+    state=$(systemctl is-active "mcc-$account.service" 2>/dev/null || true)
+    since=$(systemctl show "mcc-$account.service" \
+              --property=ActiveEnterTimestamp --value 2>/dev/null || true)
+    if [[ "$state" == active && -n "$since" ]]; then
+      uptime=$(( ( $(date +%s) - $(date -d "$since" +%s) ) / 60 ))
+      uptime="${uptime}m"
+    else
+      uptime="-"
+    fi
+    port=$(port_of "$account")
+    if timeout 2 bash -c "</dev/tcp/127.0.0.1/$port" 2>/dev/null; then
+      listening=yes
+    else
+      listening=no
+    fi
+    printf '%-20s %-10s %-12s %-7s %s\n' \
+      "$account" "$state" "$uptime" "$port" "$listening"
+  done < <(accounts)
+}
+
+usage() {
+  cat <<'EOF'
+Usage: mcc <command> [arguments]
+
+  status                       State, uptime and MCP port for every account
+  list                         Account names, one per line
+  start   <account|all>        Connect
+  stop    <account|all>        Disconnect
+  restart <account|all>        Reconnect
+  logs    <account> [-f|N]     Recent chat log, or follow it
+  attach  <account>            The real MCC console for one bot
+  pane    <account>            As attach, but waits and reattaches if the
+                               bot stops. This is what dash runs.
+  dash                         Every bot tiled, one console each
+  say     <account> <text>     Send chat or a server command
+  cmd     <account> <command>  Run an MCC internal command
+  chat    <account> [lines]    Recent chat that bot has seen
+  who     <account>            Players online
+  info    <account>            Session and connection status
+  leave   <account>            Disconnect from the server, keep running
+  tools   <account>            MCP tool names that bot exposes
+  mcp     <account> <method> [params-json]
+                               Raw JSON-RPC to that bot's MCP server
+
+Bots connect at boot on their own, staggered so the server does not reject
+them. They keep running when you detach or close SSH.
+
+In dash, click a pane to focus it and scroll with the wheel. Ctrl-B then D
+leaves the whole window running, and Ctrl-B then an arrow key also moves
+between bots. Inside one bot's console, Ctrl-A then D
+detaches from it. None of these stop a bot.
+
+say, chat, who, info, leave and cmd go through MCP, which MCC only runs
+while a bot is in game and does not restart after an AutoRelog. attach and
+dash do not need it and always work.
+
+MCP only answers while a bot is in game, and it does not come back by
+itself after MCC's AutoRelog reconnects. If LISTENING says no for a bot
+that is otherwise fine, "mcc restart <account>" brings it back.
+EOF
+}
+
+command="${1:-status}"
+(($# > 0)) && shift
+
+case "$command" in
+  status) status_table ;;
+  list) accounts ;;
+  ports) printf '%s\n' "$PORT_TABLE" ;;
+
+  start | stop | restart)
+    [[ $# -ge 1 ]] || { echo "usage: mcc $command <account|all>" >&2; exit 2; }
+    mapfile -t targets < <(resolve "$1")
+    for account in "${targets[@]}"; do
+      before=$(systemctl is-active "mcc-$account.service" 2>/dev/null || true)
+      if [[ "$command" == start && "$before" == active ]]; then
+        printf '%-20s already running\n' "$account"
+        continue
+      fi
+      systemctl "$command" "mcc-$account.service"
+      printf '%-20s %s\n' "$account" \
+        "$(systemctl is-active "mcc-$account.service" 2>/dev/null || echo failed)"
+    done
+    ;;
+
+  logs)
+    # MCC's console goes to its screen terminal, not the journal, so read
+    # the file it writes itself.
+    [[ $# -ge 1 ]] || { echo "usage: mcc logs <account> [-f]" >&2; exit 2; }
+    account="$1"; shift
+    known "$account" || { echo "Unknown account: $account" >&2; exit 1; }
+    log=/opt/mcc/accounts/"$account"/console-log.txt
+    if [[ ! -f "$log" ]]; then
+      echo "No log yet at $log. Has $account started?" >&2
+      exit 1
+    fi
+    if [[ "${1:-}" == -f ]]; then
+      tail --follow=name --lines=50 "$log"
+    else
+      tail --lines="${1:-200}" "$log"
+    fi
+    ;;
+
+  attach)
+    # The real MCC console for one bot: chat scrolls in, you type into it.
+    [[ $# -ge 1 ]] || { echo "usage: mcc attach <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    if ! console_ready "$1"; then
+      echo "$1 is not running. Start it with: mcc start $1" >&2
+      exit 1
+    fi
+    echo "Attaching to $1. Ctrl-A then D detaches and leaves it running." >&2
+    exec screen -r "mcc-$1"
+    ;;
+
+  pane)
+    # What dash runs in each pane. Unlike attach, this never gives up:
+    # stopping a bot destroys its screen session, which would otherwise
+    # kill the pane for good and leave you rebuilding the whole window.
+    [[ $# -ge 1 ]] || { echo "usage: mcc pane <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    account="$1"
+    while true; do
+      if console_ready "$account"; then
+        printf '\033[2J\033[H'
+        screen -r "mcc-$account" || true
+        # Session still present means you detached on purpose, so do not
+        # fight you for the pane.
+        if console_ready "$account"; then
+          printf '\n--- detached from %s. Press Enter to re-attach. ---\n' "$account"
+          read -r _ || sleep 5
+        fi
+      else
+        printf '\r\033[K%s is stopped. Waiting for it to come back...' "$account"
+        sleep 3
+      fi
+    done
+    ;;
+
+  dash)
+    # One real console per bot, tiled. This is the old four-pane window,
+    # except systemd owns the bots so they survive a reboot.
+    session=mcc
+    if tmux has-session -t "$session" 2>/dev/null; then
+      exec tmux attach-session -t "$session"
+    fi
+    # This script's own path, so panes work regardless of PATH.
+    self=${BASH_SOURCE[0]}
+    # Read the list into an array first. Looping over a process
+    # substitution leaves tmux sharing the loop's stdin, and it eats an
+    # account, which silently costs you a pane.
+    mapfile -t dash_accounts < <(accounts)
+    first=1
+    for account in "${dash_accounts[@]}"; do
+      pane_command="$self pane $account"
+      if ((first)); then
+        # Size the detached session up front. tmux refuses to split when
+        # there is no room, which silently drops a bot.
+        pane=$(tmux new-session -d -x 200 -y 50 -P -F '#{pane_id}' \
+                 -s "$session" -n bots "$pane_command" </dev/null)
+        first=0
+      else
+        if ! pane=$(tmux split-window -t "$session:bots" -P -F '#{pane_id}' \
+                      "$pane_command" </dev/null 2>&1); then
+          echo "Could not add a pane for $account: $pane" >&2
+          continue
+        fi
+        tmux select-layout -t "$session:bots" tiled >/dev/null
+      fi
+      tmux select-pane -t "$pane" -T "$account" </dev/null
+    done
+    tmux select-layout -t "$session:bots" tiled >/dev/null
+    # A console that dies should leave a visible pane saying so, not
+    # silently shrink the dashboard.
+    # Click a pane to focus it and use the wheel to scroll, instead of
+    # Ctrl-B and an arrow key for everything.
+    tmux set-option -t "$session" mouse on >/dev/null
+    tmux set-window-option -t "$session:bots" remain-on-exit on >/dev/null
+    tmux set-window-option -t "$session:bots" pane-border-status top >/dev/null
+    tmux set-window-option -t "$session:bots" pane-border-format ' #{pane_title} ' >/dev/null
+    exec tmux attach-session -t "$session"
+    ;;
+
+  cmd)
+    # MCC's own internal commands, as opposed to server commands.
+    [[ $# -ge 2 ]] || { echo "usage: mcc cmd <account> <internal command>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    account="$1"; shift
+    mcp_tool "$account" mcc_run_internal_command \
+      "$(jq --null-input --arg c "$*" '{command: $c}')"
+    ;;
+
+  say)
+    [[ $# -ge 2 ]] || { echo "usage: mcc say <account> <message or /command>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    account="$1"; shift
+    mcp_tool "$account" mcc_send_chat "$(jq --null-input --arg t "$*" '{text: $t}')"
+    ;;
+
+  chat)
+    [[ $# -ge 1 ]] || { echo "usage: mcc chat <account> [lines]" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_tool "$1" mcc_chat_history \
+      "$(jq --null-input --argjson n "${2:-40}" '{maxCount: $n}')"
+    ;;
+
+  who)
+    [[ $# -ge 1 ]] || { echo "usage: mcc who <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_tool "$1" mcc_players_list
+    ;;
+
+  info)
+    [[ $# -ge 1 ]] || { echo "usage: mcc info <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_tool "$1" mcc_session_status
+    ;;
+
+  leave)
+    # Leaves the server without stopping the service, so MCC's own
+    # reconnect logic can bring it back.
+    [[ $# -ge 1 ]] || { echo "usage: mcc leave <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_tool "$1" mcc_disconnect
+    ;;
+
+  tools)
+    [[ $# -ge 1 ]] || { echo "usage: mcc tools <account>" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_rpc "$1" tools/list | jq --raw-output '.result.tools[]? | .name'
+    ;;
+
+  mcp)
+    [[ $# -ge 2 ]] || { echo "usage: mcc mcp <account> <method> [params-json]" >&2; exit 2; }
+    known "$1" || { echo "Unknown account: $1" >&2; exit 1; }
+    mcp_rpc "$1" "$2" "${3:-{\}}"
+    ;;
+
+  -h | --help | help) usage ;;
+  *) usage >&2; exit 2 ;;
+esac
