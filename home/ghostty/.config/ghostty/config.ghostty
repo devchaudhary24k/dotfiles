@@ -18,14 +18,17 @@ font-size = 10
 # A little extra line height; easier on the eyes in long sessions.
 adjust-cell-height = 6%
 
-# Slightly see-through, with KWin blurring what is behind.
-background-opacity = 0.92
+# See-through glass, with KWin blurring what is behind.
+background-opacity = 0.88
 background-blur = true
 
 window-padding-x = 10
 window-padding-y = 8
 # Spread leftover space evenly so text is not glued to one edge.
 window-padding-balance = true
+# Full-screen programs (btop, nvim) colour the padding too, so they reach the
+# window's edges instead of sitting in a frame. Prompts are left alone.
+window-padding-color = extend
 
 # KDE draws the title bar (Breeze, like every other window); the GTK header
 # bar is dropped. Tabs and menus take their colours from the theme.
@@ -38,11 +41,21 @@ window-height = 38
 
 # Same cursor as Alacritty: a steady underline. The shell integration's
 # cursor feature is off below so the prompt does not switch it to a bar.
+# Catppuccin mauve, and a little thicker than the 1 px default.
 cursor-style = underline
 cursor-style-blink = false
+cursor-color = #cba6f7
+adjust-cursor-thickness = 2
 
-# Dim the splits that do not have focus, but keep them readable.
+# When the cursor jumps, a short mauve streak follows it and fades in 0.2 s
+# (shaders/cursor-trail.glsl). Shaders keep Ghostty redrawing while its
+# window is focused, a few percent of a CPU; delete this line to turn it off.
+custom-shader = shaders/cursor-trail.glsl
+
+# Dim the splits that do not have focus, but keep them readable, and draw the
+# line between splits in Catppuccin's surface grey.
 unfocused-split-opacity = 0.85
+split-divider-color = #45475a
 
 # Nudge colour pairs that would be unreadable (a program printing dark blue
 # on black, say) just enough to read.
@@ -66,6 +79,16 @@ app-notifications = no-clipboard-copy
 #   path     keeps Ghostty's helpers on PATH
 shell-integration-features = no-cursor,sudo,title,ssh-env,no-ssh-terminfo,path
 
+# Drop-down terminal ---------------------------------------------------------
+# ctrl+` anywhere, even with another app focused, slides a terminal down from
+# the top of the screen the mouse is on; ctrl+` again hides it. It keeps its
+# session while hidden. The shortcut goes through KDE's global shortcuts (the
+# xdg-desktop-portal-kde portal); KDE may ask once to allow it.
+quick-terminal-position = top
+quick-terminal-screen = mouse
+quick-terminal-animation-duration = 0.15
+keybind = global:ctrl+grave_accent=toggle_quick_terminal
+
 # Keys -----------------------------------------------------------------------
 # Defaults kept, including:
 #   ctrl+shift+t / w        new tab / close
@@ -75,3 +98,4 @@ shell-integration-features = no-cursor,sudo,title,ssh-env,no-ssh-terminfo,path
 #   ctrl+shift+f            search the scrollback
 #   ctrl+shift+arrow up/dn  jump to the previous / next prompt
 #   ctrl+shift+p            command palette
+#   ctrl+`                  drop-down terminal (above, works system-wide)
