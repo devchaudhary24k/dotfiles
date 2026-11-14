@@ -2,7 +2,7 @@
 
 KDE and Qt applications share several settings files. Portable preferences stay
 in `home/kde/`. Files tied to nukebyte's hardware or desktop layout live in
-`hosts/nukebyte/`.
+`hosts/nukebyte/kde/`.
 
 ## Shared KDE files
 
@@ -30,5 +30,6 @@ application state are not tracked.
 - `systemmonitorrc` and the other `plasma-systemmonitor/*.page` files: navigation
   and views tied to nukebyte's CPU, GPUs, disks, sensors, and network interface.
 
-These paths mirror their locations below `$HOME`. `dots link` includes them only
-when the active hostname is `nukebyte`.
+These paths mirror their locations below `$HOME`. They are linked together with
+`home/kde` when `kde` is listed in `hosts/nukebyte/packages`. It is not listed at
+the moment, so none of the KDE files are linked.

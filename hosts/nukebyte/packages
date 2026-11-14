@@ -1,0 +1,16 @@
+# nukebyte: Arch with KDE Plasma, the laptop. Linked by ./link.
+alacritty
+btop
+fastfetch    # + hosts/nukebyte/fastfetch: the company logo
+fish
+ghostty
+git
+ssh-agent    # KWallet unlocks the keys at login
+starship
+wispr-flow
+
+# In the repository but not linked here at the moment:
+# kde        # + hosts/nukebyte/kde: panel, KWin and System Monitor files
+# hypr waybar uwsm
+# ssh        # port forwards to carbon
+# micro

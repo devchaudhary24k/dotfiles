@@ -1,0 +1,7 @@
+# carbon: headless Arch dev box, reached over SSH. Linked by ./link.
+# Its system setup is setup/carbon.sh and setup/carbon-dev.sh (docs/carbon.md).
+btop
+fastfetch    # + hosts/carbon/fastfetch: the benzene ring logo
+fish
+git
+starship

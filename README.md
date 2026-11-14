@@ -1,93 +1,98 @@
 # Dotfiles
 
-User configuration for nukebyte, an Arch Linux laptop running KDE Plasma. It
-does not track package lists, root-owned system files, application snapshots,
-credentials, histories, caches, or backups.
+User configuration for two Arch Linux machines: nukebyte, a laptop running KDE
+Plasma, and carbon, a headless development machine reached over SSH. It does
+not track root-owned system files, application snapshots, credentials,
+histories, caches, or backups.
 
-Every package is linked into the home directory with GNU Stow by `bin/dots`.
-The links point back into this repository, so editing `~/.config/fish/...` or
+`./link` links a machine's packages into its home directory with GNU Stow. The
+links point back into this repository, so editing `~/.config/fish/...` or
 `~/.gitconfig` edits the tracked file directly.
 
 ## Layout
 
 ```text
-home/                 shared user configuration
-hosts/HOSTNAME/       configuration for one machine
-bin/dots              Stow helper
-setup/                one-time system setup scripts for a machine (run as root)
-docs/                 notes about selected configuration
+home/PACKAGE/            configuration shared by every machine
+hosts/HOST/packages      the packages linked on HOST
+hosts/HOST/PACKAGE/      files only HOST gets, added to that package
+link                     the Stow script
+setup/                   one-time system setup for a machine (run as root)
+assets/                  sources and generators for files in the packages
+docs/                    notes about selected configuration
 ```
 
 A package mirrors its path below the home directory. For example:
 
 ```text
-home/alacritty/.config/alacritty/alacritty.toml
-                                 -> ~/.config/alacritty/alacritty.toml
+home/fish/.config/fish/config.fish -> ~/.config/fish/config.fish
 ```
 
-Nukebyte's monitor layout, Plasma panel, power settings, input-device settings,
-KWin layout, and hardware-specific System Monitor pages live under
-`hosts/nukebyte/`. They are linked only when the active hostname is `nukebyte`.
-
-The Hyprland, Waybar and UWSM packages are linked the same way, so an edit
-under `~/.config/hypr` lands in this repository and `hyprctl reload` picks it
-up. Each machine's monitor layout is
-`home/hypr/.config/hypr/monitors/HOSTNAME.lua`; `hyprland.lua` loads the one
-matching `/etc/hostname`.
+Linking a package links `home/PACKAGE` and, when it exists,
+`hosts/HOST/PACKAGE` on top. That is how each machine gets its own fastfetch
+logo (`hosts/nukebyte/fastfetch`, `hosts/carbon/fastfetch`) while the
+fastfetch config, the aliases and the animation stay shared.
 
 ## Commands
 
 ```text
-dots link [PACKAGE...]    link all packages or selected shared packages
-dots unlink [PACKAGE...]  remove all links or selected shared-package links
-dots dry-run [PACKAGE...] preview the corresponding link operation
-dots add PACKAGE FILE     adopt one reviewed regular file
-dots scan                 report nearby unmanaged configuration files
-dots status               show the active host and Git status
-dots doctor               check dependencies, links, and sensitive filenames
+./link          link (or relink) every package listed for this machine
+./link -n       dry run: show what would change
+./link -D       remove this machine's links
+./link ... HOST act as HOST instead of this machine's hostname
 ```
 
-With no package arguments, `link`, `unlink`, and `dry-run` operate on every
-shared package plus the current host package. With package arguments, they
-operate only on the named package below `home/`.
-
-The `add` command refuses known credential locations and files containing
-secret-shaped assignments. Before it replaces the source with a Stow link, it
-stores a recovery copy under
-`${XDG_STATE_HOME:-~/.local/state}/dotfiles/backups/`.
-
-`scan` reports unmanaged files beside tracked configuration. It does not import
-or delete anything. Patterns in `.dots-ignore` keep known generated files out of
-its output.
+Files are linked one by one (`stow --no-folding`), never whole folders, so a
+program that adds files to its config folder never writes into the repository.
+If a real file already sits where a link should go, Stow stops and changes
+nothing; move the file away and run `./link` again.
 
 ## Setup
 
-Install Git and Stow, clone the repository to `~/code/dotfiles`, and link the
-packages you want, previewing first:
+Install Git and Stow, clone the repository, preview, then link:
 
 ```bash
 sudo pacman -S --needed git stow
-bin/dots dry-run fish git starship alacritty
-bin/dots link fish git starship alacritty
-bin/dots doctor
+git clone git@github.com:devchaudhary24k/dotfiles.git ~/code/dotfiles
+cd ~/code/dotfiles
+./link -n
+./link
 ```
 
-The `dots` command is itself the `dotfiles-cli` package
-(`bin/dots link dotfiles-cli`), which also installs its Fish completions. It
-finds the repository by following its own link, so the clone can live anywhere.
+For a new machine, create `hosts/HOST/packages` first. Its name is the output
+of `hostnamectl hostname`.
+
+## The machines
+
+| | nukebyte | carbon |
+|---|---|---|
+| Packages | see `hosts/nukebyte/packages` | fish, starship, git, btop, fastfetch |
+| fastfetch logo | the company logo | a benzene ring |
+| Prompt colours | reds | teals |
+
+The prompt and logo differ so a terminal shows which machine it is on.
+Starship has one config, `home/starship/.config/starship.toml`, with a
+palette per machine; fish selects the one named after the hostname. Carbon's
+system setup (`setup/carbon.sh`, `setup/carbon-dev.sh`) is described in
+[`docs/carbon.md`](docs/carbon.md).
 
 ## Selected configuration
 
 Fish defines the interactive shell, aliases, tool initialization, and a Trash
 wrapper for `rm`. Git, Ghostty, Alacritty, Starship, fastfetch, btop, Micro,
 the SSH agent (`ssh-agent`: session environment, KWallet unlock at login), SSH
-forwarding, and selected KDE settings have separate packages.
+forwarding, Hyprland, Waybar, UWSM and selected KDE settings have separate
+packages. A package that is not in a machine's list is simply not linked there.
 
-Ghostty, fastfetch and btop share the Catppuccin Mocha palette. The fastfetch
-logo is generated from the company logo SVG by `assets/fastfetch/logo-anim.py`,
-which writes the still logo and the idle animation that `ff-logo` plays.
+Ghostty, fastfetch and btop share the Catppuccin Mocha palette. fastfetch runs
+when a terminal opens and when you type `fastfetch` (or `ff`); its logo then
+animates until the screen could move. `ff-logo` plays the animation. The
+logos come from generators in `assets/fastfetch/`: `logo-anim.py` draws
+nukebyte's from the company logo SVG, and `molecule-anim.py` draws carbon's.
+
+Each machine's Hyprland monitor layout is
+`home/hypr/.config/hypr/monitors/HOSTNAME.lua`; `hyprland.lua` loads the one
+matching `/etc/hostname`.
 
 KDE file ownership and the host split are documented in
 [`docs/kde.md`](docs/kde.md). The SSH forwarding fragment is documented in
-[`docs/ssh.md`](docs/ssh.md). Carbon's system setup (`setup/carbon.sh` and
-`setup/carbon-dev.sh`) is documented in [`docs/carbon.md`](docs/carbon.md).
+[`docs/ssh.md`](docs/ssh.md).

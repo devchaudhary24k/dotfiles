@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# link: link this machine's dotfiles into $HOME with GNU Stow.
+#
+#   ./link              link (or relink) every package listed for this machine
+#   ./link -n           dry run: show what would change, change nothing
+#   ./link -D           remove this machine's links
+#   ./link ... HOST     act as HOST instead of this machine's hostname
+#
+# hosts/HOST/packages lists the packages, one per line (# starts a comment).
+# Each package is home/NAME, shared by every machine, plus hosts/HOST/NAME
+# when that exists: files only this machine gets, such as its fastfetch logo.
+# Links point back into this repository, so editing ~/.config/fish/... edits
+# the tracked file. --no-folding links files one by one, never whole folders,
+# so programs that add their own files never write into the repository.
+set -euo pipefail
+
+cd "$(dirname "$(readlink -f "$0")")"
+command -v stow >/dev/null || { echo "link: GNU Stow is not installed (pacman -S stow)" >&2; exit 1; }
+
+mode=(--restow) done="linked"
+case ${1:-} in
+  -n) mode=(--restow --simulate --verbose=1) done="dry run, nothing changed"; shift ;;
+  -D) mode=(--delete) done="unlinked"; shift ;;
+  -h | --help) sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+esac
+host=${1:-$(hostnamectl hostname 2>/dev/null || cat /etc/hostname)}
+list=hosts/$host/packages
+[[ -f $list ]] || { echo "link: no $list, so nothing is set up for $host" >&2; exit 1; }
+
+mapfile -t packages < <(sed 's/#.*//' "$list" | tr -s '[:space:]' '\n' | sed '/^$/d')
+shared=() own=()
+for package in "${packages[@]}"; do
+  [[ -d home/$package ]] && shared+=("$package")
+  [[ -d hosts/$host/$package ]] && own+=("$package")
+  [[ -d home/$package || -d hosts/$host/$package ]] || { echo "link: $list names $package, which does not exist" >&2; exit 1; }
+done
+
+stow_into_home() { stow --dir="$1" --target="$HOME" --no-folding "${mode[@]}" "${@:2}"; }
+((${#shared[@]})) && stow_into_home home "${shared[@]}"
+((${#own[@]})) && stow_into_home "hosts/$host" "${own[@]}"
+echo "link: $host: ${packages[*]} ($done)"
