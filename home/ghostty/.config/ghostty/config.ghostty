@@ -4,10 +4,16 @@
 
 # Look -----------------------------------------------------------------------
 
-# Catppuccin Mocha, built into Ghostty: deep blue-grey background, soft
-# colours, all of them at 7:1 contrast or better. Same family as Micro's
-# catppuccin-macchiato.
+# Black glass: Catppuccin Mocha's colours (built into Ghostty) on a pure
+# black background, see-through over KWin's blur. Catppuccin's text is
+# bright enough to read on black at any opacity.
 theme = Catppuccin Mocha
+background = #000000
+# Selections in a dark mauve, so they read as a tint rather than a block.
+selection-background = #3b2f52
+selection-foreground = #f5e0dc
+# Bold text in the bright colours, so it stands out on black.
+bold-color = bright
 # Bright black is the dim grey for fish's autosuggestions and comments. The
 # theme's own (#585b70) is hard to read at 2.5:1; Catppuccin's overlay1 is
 # 4.4:1, still clearly dimmer than normal text.
@@ -18,12 +24,13 @@ font-size = 10
 # A little extra line height; easier on the eyes in long sessions.
 adjust-cell-height = 6%
 
-# See-through glass, with KWin blurring what is behind.
-background-opacity = 0.88
+# Dark glass: black at 85%, with KWin blurring what is behind.
+background-opacity = 0.85
 background-blur = true
 
-window-padding-x = 10
-window-padding-y = 8
+# Room to breathe around the text.
+window-padding-x = 16
+window-padding-y = 12
 # Spread leftover space evenly so text is not glued to one edge.
 window-padding-balance = true
 # Full-screen programs (btop, nvim) colour the padding too, so they reach the
@@ -55,6 +62,7 @@ custom-shader = shaders/cursor-trail.glsl
 # Dim the splits that do not have focus, but keep them readable, and draw the
 # line between splits in Catppuccin's surface grey.
 unfocused-split-opacity = 0.85
+unfocused-split-fill = #000000
 split-divider-color = #45475a
 
 # Nudge colour pairs that would be unreadable (a program printing dark blue
