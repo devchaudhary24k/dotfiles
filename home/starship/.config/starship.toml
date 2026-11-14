@@ -1,13 +1,13 @@
 format = """
-[](#3B0A0A)\
+[](user)\
 $python\
 $username\
-[](bg:#571010 fg:#3B0A0A)\
+[](bg:directory fg:user)\
 $directory\
-[](fg:#571010 bg:#7F1D1D)\
+[](fg:directory bg:git)\
 $git_branch\
 $git_status\
-[](fg:#7F1D1D bg:#DC2626)\
+[](fg:git bg:language)\
 $c\
 $elixir\
 $elm\
@@ -18,25 +18,48 @@ $julia\
 $nodejs\
 $nim\
 $rust\
-[](fg:#DC2626 bg:#B91C1C)\
+[](fg:language bg:docker)\
 $docker_context\
-[](fg:#B91C1C bg:#991B1B)\
+[](fg:docker bg:time)\
 $time\
-[ ](fg:#991B1B)\
+[ ](fg:time)\
 """
 command_timeout = 5000
+
+# The prompt is the same on every machine; only its colours differ, so the
+# machine you are on shows at a glance. fish (conf.d/90-tools.fish) starts
+# Starship with the palette named after this machine's hostname, falling back
+# to the one set here. Add a [palettes.<hostname>] table for a new machine.
+palette = "nukebyte"
+
+[palettes.nukebyte] # reds
+user = "#3B0A0A"
+directory = "#571010"
+git = "#7F1D1D"
+language = "#DC2626"
+docker = "#B91C1C"
+time = "#991B1B"
+
+[palettes.carbon] # teals, like the electrons in carbon's fastfetch logo
+user = "#042F2E"
+directory = "#0A3F3B"
+git = "#134E4A"
+language = "#0D9488"
+docker = "#0F766E"
+time = "#115E59"
+
 # Disable the blank line at the start of the prompt
 # add_newline = false
 
 # You can also replace your username with a neat symbol like  to save some space
 [username]
 show_always = true
-style_user = "bg:#3B0A0A"
-style_root = "bg:#3B0A0A"
+style_user = "bg:user"
+style_root = "bg:user"
 format = '[$user ]($style)'
 
 [directory]
-style = "bg:#571010"
+style = "bg:directory"
 format = "[ $path ]($style)"
 truncation_length = 3
 truncation_symbol = "…/"
@@ -56,74 +79,74 @@ truncation_symbol = "…/"
 
 [c]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [docker_context]
 symbol = " "
-style = "bg:#B91C1C"
+style = "bg:docker"
 format = '[ $symbol $context ]($style)$path'
 
 [elixir]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [elm]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [git_branch]
 symbol = ""
-style = "bg:#7F1D1D"
+style = "bg:git"
 format = '[ $symbol $branch ]($style)'
 
 [git_status]
-style = "bg:#7F1D1D"
+style = "bg:git"
 format = '[$all_status$ahead_behind ]($style)'
 
 [golang]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [haskell]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [java]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [julia]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [nodejs]
 symbol = ""
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [nim]
 symbol = " "
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [python]
-style = "bg:#3B0A0A"
+style = "bg:user"
 format = '[(\($virtualenv\) )]($style)'
 
 [rust]
 symbol = ""
-style = "bg:#DC2626"
+style = "bg:language"
 format = '[ $symbol ($version) ]($style)'
 
 [time]
 disabled = false
 time_format = "%R" # Hour:Minute Format
-style = "bg:#991B1B"
+style = "bg:time"
 format = '[ $time ]($style)'

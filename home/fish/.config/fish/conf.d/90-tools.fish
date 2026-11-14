@@ -4,8 +4,17 @@ if type -q zoxide
     zoxide init fish | source
 end
 
-# Starship draws the prompt (config: ~/.config/starship.toml).
+# Starship draws the prompt (config: ~/.config/starship.toml). Its colours
+# come from the palette named after this machine, so the prompt shows which
+# machine you are on. Starship has no setting for that, so it gets a copy of
+# the config with this machine's palette selected.
 if type -q starship
+    set -l host (prompt_hostname)
+    set -l config ~/.config/starship.toml
+    if test -r $config; and string match -qr "^\\[palettes\\.$host\\]" <$config
+        set -gx STARSHIP_CONFIG (path resolve -- $XDG_RUNTIME_DIR)/starship-$host.toml
+        string replace -r '^palette = .*' "palette = \"$host\"" <$config >$STARSHIP_CONFIG
+    end
     starship init fish | source
 end
 
