@@ -1,7 +1,9 @@
 # The animated fastfetch logo (~/.local/bin/ff-logo, from the fastfetch package
-# in the dotfiles). fish_greeting calls __ff_logo_start; the logo then keeps
-# animating while the first prompt sits idle, and stops, leaving the still
-# logo, as soon as anything could move the screen under it.
+# in the dotfiles). fish_greeting calls __ff_logo_start, and so does typing
+# `fastfetch` (or `ff`) at the prompt; the logo then keeps animating while the
+# next prompt sits idle, and stops, leaving the still logo, as soon as
+# anything could move the screen under it. Each machine has its own logo:
+# hosts/<machine>/fastfetch in the dotfiles.
 #
 # Turn it off: set -U fastfetch_anim 0     (back on: set -e fastfetch_anim)
 
@@ -10,20 +12,33 @@ status is-interactive; or return
 function __ff_logo_start --description 'fastfetch, then animate its logo'
     __ff_logo_stop
     if test "$fastfetch_anim" = 0; or not command -q ff-logo
-        fastfetch
+        command fastfetch
         return
     end
     set -l pid_file (path resolve -- $XDG_RUNTIME_DIR)/ff-logo-$fish_pid.pid
     command rm -f -- $pid_file
     # fastfetch runs from fish itself (not from ff-logo) so it reports fish
-    # as the shell and the real terminal.
+    # as the shell and the real terminal. `ff-logo row` first makes room
+    # below the prompt, so fastfetch never scrolls and the logo stays where
+    # ff-logo expects it.
     set -l row (command ff-logo row)
-    fastfetch
+    command fastfetch
     string match -qr '^\d+$' -- $row; and command ff-logo play $row
     if test -r $pid_file
         read -g __ff_logo_pid <$pid_file
         command rm -f -- $pid_file
         set -e __ff_logo_prompted
+    end
+end
+
+# Typing `fastfetch` (or the `ff` alias) animates the logo as well. With
+# arguments, or with its output going anywhere but the terminal, it is plain
+# fastfetch.
+function fastfetch --wraps fastfetch --description 'fastfetch, with the logo animated at the prompt'
+    if test (count $argv) -eq 0; and isatty stdout
+        __ff_logo_start
+    else
+        command fastfetch $argv
     end
 end
 

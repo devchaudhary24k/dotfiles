@@ -16,9 +16,10 @@ On SIGTERM the still logo is put back and the process exits. It also stops by
 itself after a few minutes, when the shell that started it is gone, or when
 the terminal closes.
 
-The frames come from ~/.config/fastfetch/logo.loop (made by
-assets/fastfetch/logo-anim.py in the dotfiles); frame 0 is the still logo
-fastfetch prints, so stopping at any point leaves the normal picture.
+The frames come from ~/.config/fastfetch/logo.loop, this machine's own logo
+(made by assets/fastfetch/logo-anim.py or molecule-anim.py in the dotfiles);
+frame 0 is the still logo fastfetch prints, so stopping at any point leaves
+the normal picture. It also plays over SSH.
 """
 
 import os
@@ -37,6 +38,9 @@ MAX_SECONDS = 300
 # Where fastfetch puts the logo, from logo.padding in config.jsonc.
 PAD_TOP = 5
 PAD_LEFT = 2
+# Rows kept free below the prompt before fastfetch runs: its full output
+# (22 rows with this config) plus the prompt after it, with room to spare.
+RESERVE = 32
 
 
 def pid_file(shell_pid):
@@ -119,15 +123,24 @@ def open_tty():
 
 
 def row():
-    """Print the cursor row, for fish to pass to `play` after fastfetch."""
+    """Print the cursor row, for fish to pass to `play` after fastfetch.
+
+    When fastfetch would not fit below the cursor, scroll the screen up first
+    (as clearing it would), so fastfetch does not scroll while it prints and
+    the logo ends up exactly where `play` will look for it.
+    """
     tty_fd = open_tty()
     start = cursor_row(tty_fd)
+    lines = os.get_terminal_size(tty_fd).lines
+    if start and start + RESERVE > lines and lines > RESERVE:
+        os.write(tty_fd, b"\n" * RESERVE + f"\x1b[{RESERVE}A".encode())
+        start = lines - RESERVE
     print(start if start else "")
 
 
 def start_play(start):
     """Called right after fastfetch: animate the logo it just printed."""
-    if not FRAMES.exists() or os.environ.get("SSH_CONNECTION"):
+    if not FRAMES.exists():
         return
     tty_fd = open_tty()
     end = cursor_row(tty_fd)
