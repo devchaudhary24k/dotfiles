@@ -1,0 +1,9 @@
+# Read by libddcutil inside Plasma's PowerDevil (monitor brightness sliders).
+#
+# When the screens turn off, the MSI on the NVIDIA DisplayPort stops answering
+# DDC/CI, ddcutil's watcher marks it "disconnected", and PowerDevil drops its
+# brightness slider until the cable is replugged. PowerDevil already redetects
+# monitors itself when the screen layout changes, so ddcutil's own watcher is
+# not needed.
+[libddcutil]
+options: --disable-watch-displays

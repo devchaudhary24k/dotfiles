@@ -1,6 +1,7 @@
 # nukebyte: Arch with KDE Plasma, the laptop. Linked by ./link.
 alacritty
 btop
+ddcutil      # hosts/nukebyte/ddcutil: monitor brightness (ddcutilrc)
 fastfetch    # + hosts/nukebyte/fastfetch: the company logo
 fish
 ghostty
